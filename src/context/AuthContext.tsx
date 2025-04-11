@@ -349,27 +349,27 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const registerUser = async (email: string, password: string, name: string): Promise<boolean> => {
     setIsLoading(true);
-    setAuthStatus('authenticating');
     setError(null);
     
     try {
+      console.log('Starting user registration...');
       const { user: registeredUser, error: regError } = await AuthService.register(email, password, name);
       
       if (registeredUser) {
+        console.log('User registration successful');
         setUser(registeredUser);
-        setAuthStatus('authenticated');
+        // Don't set auth status to authenticated yet - let the onboarding flow handle that
         setIsLoading(false);
         return true;
       } else {
+        console.error('Registration failed:', regError);
         setError(regError || 'Registration failed');
-        setAuthStatus('unauthenticated');
         setIsLoading(false);
         return false;
       }
     } catch (error) {
       console.error('Registration error:', error);
       setError('An unexpected error occurred during registration');
-      setAuthStatus('error');
       setIsLoading(false);
       return false;
     }

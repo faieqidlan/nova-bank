@@ -1,12 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Alert, SafeAreaView } from 'react-native';
-import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import { View, Text, StyleSheet, Alert, SafeAreaView, Platform, TouchableOpacity } from 'react-native';
+import { useNavigation, useRoute, RouteProp, NavigationProp } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { COLORS, SIZES } from '../constants/theme';
 import Button from '../components/common/Button';
 import Card from '../components/common/Card';
 import { Ionicons } from '@expo/vector-icons';
 import { RootStackParamList } from '../navigation/types';
+import * as LocalAuthentication from 'expo-local-authentication';
+import * as SecureStore from 'expo-secure-store';
+import { BiometricsService } from '../services/BiometricsService';
 
 const AuthScreen: React.FC = () => {
   const { 
@@ -20,10 +23,42 @@ const AuthScreen: React.FC = () => {
     isLoading 
   } = useAuth();
   
-  const navigation = useNavigation();
+  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const route = useRoute<RouteProp<RootStackParamList, 'Auth'>>();
   const showBiometricPrompt = route.params?.showBiometricPrompt;
   const [isAuthenticating, setIsAuthenticating] = useState(false);
+  const [availableAuthTypes, setAvailableAuthTypes] = useState<LocalAuthentication.AuthenticationType[]>([]);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Check for available authentication types when the component mounts
+  useEffect(() => {
+    const checkAuthTypes = async () => {
+      try {
+        // Check if hardware is available
+        const hasHardware = await LocalAuthentication.hasHardwareAsync();
+        if (!hasHardware) {
+          console.log('No biometric hardware detected');
+          return;
+        }
+        
+        // Check if biometrics are enrolled
+        const isEnrolled = await LocalAuthentication.isEnrolledAsync();
+        if (!isEnrolled) {
+          console.log('No biometrics enrolled on this device');
+          return;
+        }
+        
+        // Get supported authentication types
+        const types = await LocalAuthentication.supportedAuthenticationTypesAsync();
+        setAvailableAuthTypes(types);
+        console.log('Available auth types:', types);
+      } catch (err) {
+        console.error('Error checking auth types:', err);
+      }
+    };
+    
+    checkAuthTypes();
+  }, []);
 
   useEffect(() => {
     // Auto-trigger biometric authentication when component mounts 
@@ -32,7 +67,7 @@ const AuthScreen: React.FC = () => {
       console.log('Auto-triggering biometric authentication on AuthScreen mount');
       handleAuthenticate();
     }
-  }, []);
+  }, [isBiometricSupported, showBiometricPrompt]);
 
   useEffect(() => {
     if (error) {
@@ -49,40 +84,95 @@ const AuthScreen: React.FC = () => {
     if (!isBiometricSupported) {
       Alert.alert(
         'Biometric Authentication Not Available',
-        'Your device does not support biometric authentication.',
-        [{ text: 'OK' }]
+        'Your device does not support biometric authentication or no biometrics are enrolled.',
+        [{ text: 'OK', onPress: () => handleLoginWithPassword() }]
       );
       return;
     }
 
     setIsAuthenticating(true);
-    await authenticateWithBiometrics();
-    setIsAuthenticating(false);
+    try {
+      // Use recommendedAuthenticationTypes if available in your Expo SDK version
+      await authenticateWithBiometrics();
+    } catch (err) {
+      console.error('Authentication error:', err);
+      Alert.alert(
+        'Authentication Failed',
+        'Please try again or use password login.',
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setIsAuthenticating(false);
+    }
   };
 
   const handleLoginWithPassword = () => {
-    navigation.navigate('Login' as never);
+    navigation.navigate('Login');
   };
 
   const getBiometricIcon = () => {
-    switch (biometricType) {
-      case 'FaceID':
-        return 'scan-outline';
-      case 'TouchID':
-        return 'finger-print';
-      default:
-        return 'lock-closed';
+    // Determine the appropriate icon based on available authentication types
+    if (availableAuthTypes.includes(LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION)) {
+      return 'scan-outline';
+    } else if (availableAuthTypes.includes(LocalAuthentication.AuthenticationType.FINGERPRINT)) {
+      return 'finger-print'; 
+    } else if (availableAuthTypes.includes(LocalAuthentication.AuthenticationType.IRIS)) {
+      return 'eye-outline';
+    } else {
+      // Default icon if we can't determine the type
+      return 'lock-closed';
     }
   };
 
   const getBiometricText = () => {
-    switch (biometricType) {
-      case 'FaceID':
-        return 'Use Face ID to securely access your account.';
-      case 'TouchID':
-        return 'Use Touch ID to securely access your account.';
-      default:
-        return 'Use biometric authentication to access your account securely.';
+    if (availableAuthTypes.includes(LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION)) {
+      return 'Use Face ID to securely access your account.';
+    } else if (availableAuthTypes.includes(LocalAuthentication.AuthenticationType.FINGERPRINT)) {
+      return Platform.OS === 'ios' 
+        ? 'Use Touch ID to securely access your account.' 
+        : 'Use Fingerprint to securely access your account.';
+    } else if (availableAuthTypes.includes(LocalAuthentication.AuthenticationType.IRIS)) {
+      return 'Use Iris scan to securely access your account.';
+    } else {
+      return 'Use biometric authentication to access your account securely.';
+    }
+  };
+
+  const handleBiometricAuthentication = async () => {
+    try {
+      setIsAuthenticating(true);
+      setErrorMessage(null);
+      
+      // Check if biometric keys exist before attempting auth
+      const { keysExist } = await BiometricsService.biometricKeysExist();
+      if (!keysExist) {
+        console.log('No biometric keys exist, cannot authenticate with biometrics');
+        setErrorMessage(`${biometricTypeName} login not set up. Please use password login.`);
+        setIsAuthenticating(false);
+        return;
+      }
+      
+      // Check if credentials exist
+      const storedCredentials = await SecureStore.getItemAsync('biometric_secured_credentials');
+      if (!storedCredentials) {
+        console.log('No stored biometric credentials found');
+        setErrorMessage('Biometric login data missing. Please use password login.');
+        setIsAuthenticating(false);
+        return;
+      }
+      
+      // Authentication is only possible if credentials exist
+      const success = await authenticateWithBiometrics();
+      if (!success) {
+        console.log('Biometric authentication failed');
+        // The user can still try again or use password auth
+        setErrorMessage('Authentication failed. Please try again or use password.');
+        setIsAuthenticating(false);
+      }
+    } catch (err) {
+      console.error('Error during biometric authentication:', err);
+      setErrorMessage('An error occurred. Please try again.');
+      setIsAuthenticating(false);
     }
   };
 
@@ -90,7 +180,7 @@ const AuthScreen: React.FC = () => {
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
         <View style={styles.logoContainer}>
-          <Text style={styles.logo}>Ryt</Text>
+          <Text style={styles.logo}>Nova</Text>
           <Text style={styles.logoSubtitle}>Bank</Text>
         </View>
 
@@ -98,9 +188,9 @@ const AuthScreen: React.FC = () => {
           <Text style={styles.title}>Login to Your Account</Text>
           
           {/* Display inline error message if there is an error */}
-          {error && (
+          {errorMessage && (
             <View style={styles.errorContainer}>
-              <Text style={styles.errorText}>{error}</Text>
+              <Text style={styles.errorText}>{errorMessage}</Text>
             </View>
           )}
           
@@ -113,19 +203,21 @@ const AuthScreen: React.FC = () => {
             </Text>
           </View>
 
-          <Button
-            title={`Login with ${biometricTypeName}`}
-            onPress={handleAuthenticate}
-            loading={isAuthenticating || isLoading}
-            style={styles.button}
-          />
+          {isBiometricSupported ? (
+            <Button
+              title={`Login with ${biometricTypeName}`}
+              onPress={handleBiometricAuthentication}
+              loading={isAuthenticating || isLoading}
+              style={styles.button}
+            />
+          ) : null}
 
-          <Button
-            title="Login with Password"
-            onPress={handleLoginWithPassword}
-            variant="outline"
-            style={styles.passwordButton}
-          />
+          <TouchableOpacity 
+            style={styles.passwordLoginButton}
+            onPress={() => navigation.navigate('Login')}
+          >
+            <Text style={styles.passwordLoginText}>Use Password Login</Text>
+          </TouchableOpacity>
 
           <Text style={styles.securityText}>
             Your security is our priority. All sensitive data is encrypted and protected.
@@ -198,8 +290,17 @@ const styles = StyleSheet.create({
   button: {
     marginBottom: 16,
   },
-  passwordButton: {
+  passwordLoginButton: {
     marginTop: 12,
+    padding: SIZES.padding,
+    backgroundColor: COLORS.primary,
+    borderRadius: SIZES.radius,
+    alignItems: 'center',
+  },
+  passwordLoginText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: "#FFFFFF",
   },
   securityText: {
     fontSize: 12,
@@ -209,14 +310,16 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   errorContainer: {
-    backgroundColor: COLORS.danger + '20', // Using danger with transparency
-    padding: SIZES.padding,
-    borderRadius: SIZES.radius,
+    backgroundColor: 'rgba(255, 0, 0, 0.1)',
+    padding: 10,
+    borderRadius: 8,
     marginBottom: 16,
+    marginTop: 8,
   },
   errorText: {
     color: COLORS.danger,
-    fontWeight: '500',
+    textAlign: 'center',
+    fontSize: 14,
   },
 });
 

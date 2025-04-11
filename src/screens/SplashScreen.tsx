@@ -169,7 +169,7 @@ const SplashScreen: React.FC = () => {
           }
         ]}
       >
-        <Text style={styles.logo}>Ryt</Text>
+        <Text style={styles.logo}>Nova</Text>
         <Text style={styles.logoSubtitle}>Bank</Text>
       </Animated.View>
       

@@ -288,9 +288,12 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
   },
   userName: {
-    fontSize: 22,
+    marginTop: 4,
+    fontSize: 24,
+    width: '100%',
     fontWeight: '700',
     color: COLORS.text,
+    textTransform: 'capitalize',
   },
   notificationIcon: {
     width: 40,
@@ -301,8 +304,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   balanceCard: {
-    marginBottom: 24,
-    borderRadius: 16,
+    marginBottom: 16,
+    borderRadius: 24,
   },
   balanceHeader: {
     flexDirection: 'row',
@@ -337,7 +340,7 @@ const styles = StyleSheet.create({
   actionButton: {
     flex: 1,
     marginHorizontal: 4,
-    borderRadius: 8,
+    borderRadius: 16,
     paddingVertical: 10,
   },
   sectionHeader: {
@@ -364,6 +367,7 @@ const styles = StyleSheet.create({
   },
   transactionsCard: {
     marginBottom: 24,
+    borderRadius: 24,
   },
   loadingContainer: {
     padding: 24,
@@ -469,7 +473,7 @@ const styles = StyleSheet.create({
   featuredImageContainer: {
     width: 120,
     height: 120,
-    borderRadius: 8,
+    borderRadius: 16,
     backgroundColor: 'rgba(255, 255, 255, 0.03)',
     justifyContent: 'center',
     alignItems: 'center',
@@ -477,7 +481,7 @@ const styles = StyleSheet.create({
   featuredImage: {
     width: '100%',
     height: '100%',
-    borderRadius: 8,
+    borderRadius: 16,
   },
 });
 

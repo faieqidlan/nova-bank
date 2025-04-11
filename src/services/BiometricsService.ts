@@ -276,132 +276,41 @@ export class BiometricsService {
   }
 
   /**
-   * Simple biometric prompt without signature generation
-   * @param promptMessage Message to display in the biometric prompt
-   * @returns Object with details about authentication result
+   * Show a simple biometric authentication prompt
+   * @param promptMessage Message to display during authentication
    */
-  static async simplePrompt(promptMessage: string) {
+  static async simplePrompt(promptMessage: string): Promise<{ success: boolean; error?: string }> {
     try {
-      // First check if biometrics are available
-      const { available, biometryType } = await this.isSensorAvailable();
+      console.log(`Simple biometric prompt: ${promptMessage}`);
       
-      if (!available) {
-        return { 
-          success: false, 
-          error: 'Biometrics not available' 
-        };
-      }
+      const result = await LocalAuthentication.authenticateAsync({
+        promptMessage: promptMessage || 'Authenticate to continue',
+        disableDeviceFallback: false,
+      });
       
-      console.log(`Attempting authentication with prompt: "${promptMessage}"`);
+      console.log(`Authentication result: ${JSON.stringify(result)}`);
       
-      // Different approach for iOS vs Android
-      let result;
-      
-      if (Platform.OS === 'ios') {
-        // On iOS, we need special handling for FaceID
-        try {
-          console.log('Using iOS-specific authentication approach with disableDeviceFallback=true');
-          
-          // If it's FaceID, make sure permissions are granted first
-          if (biometryType === 'FaceID') {
-            console.log('FaceID detected, checking permission status first');
-            const { permissionGranted } = await this.checkBiometricPermission();
-            
-            if (!permissionGranted) {
-              console.log('FaceID permission not granted, attempting to request it');
-              await this.forcePermissionPrompt();
-            }
-          }
-          
-          // Now attempt the authentication
-          result = await LocalAuthentication.authenticateAsync({
-            promptMessage: promptMessage || (biometryType === 'FaceID' ? 'Authenticate with Face ID' : 'Authenticate to continue'),
-            disableDeviceFallback: true, // Prevent passcode fallback
-            cancelLabel: 'Cancel', // Custom cancel button
-          });
-          console.log('iOS auth result:', JSON.stringify(result));
-          
-          // If we get a permission error, try to request permission and retry
-          if (!result.success && 
-              (result as any).error && 
-              (result as any).error.includes('permission')) {
-            console.log('Permission issue detected, attempting explicit permission request');
-            await this.forcePermissionPrompt();
-            
-            // Try authentication again
-            result = await LocalAuthentication.authenticateAsync({
-              promptMessage: promptMessage || (biometryType === 'FaceID' ? 'Authenticate with Face ID' : 'Authenticate to continue'),
-              disableDeviceFallback: true,
-            });
-            console.log('iOS auth retry after permission fix:', JSON.stringify(result));
-          }
-        } catch (error) {
-          console.log('Error with first iOS auth attempt, trying alternative:', error);
-          
-          // If first approach fails, try with more specific biometric prompts
-          try {
-            if (biometryType === 'FaceID') {
-              result = await LocalAuthentication.authenticateAsync({
-                promptMessage: promptMessage || 'Authenticate with Face ID',
-                disableDeviceFallback: true,
-              });
-            } else {
-              result = await LocalAuthentication.authenticateAsync({
-                promptMessage: promptMessage || 'Authenticate with Touch ID',
-                disableDeviceFallback: true,
-              });
-            }
-            console.log('iOS auth retry result:', JSON.stringify(result));
-          } catch (innerError) {
-            console.log('Error in retry authentication, using most basic approach:', innerError);
-            
-            // Last resort - simplest possible configuration
-            result = await LocalAuthentication.authenticateAsync({
-              disableDeviceFallback: true,
-            });
-            console.log('Simplest possible auth result:', JSON.stringify(result));
-          }
-        }
-      } else {
-        // For Android, use the standard approach
-        result = await LocalAuthentication.authenticateAsync({
-          promptMessage: promptMessage || 'Authenticate to continue',
-          disableDeviceFallback: false
-        });
-        console.log('Android auth result:', JSON.stringify(result));
-      }
-      
-      // Improved error handling and more detailed error messages
       if (!result.success) {
-        let errorMessage = 'Authentication failed or was cancelled';
+        let errorMessage = 'Authentication failed';
         
-        if ((result as any).error) {
-          if ((result as any).error.includes('cancel')) {
-            errorMessage = 'Authentication was cancelled';
-          } else if ((result as any).error.includes('lockout')) {
-            errorMessage = 'Too many failed attempts. Please try again later';
-          } else if ((result as any).error.includes('usage_description')) {
-            errorMessage = 'Permission required. Please enable biometrics permission in settings';
-          } else if ((result as any).error.includes('passcode')) {
-            errorMessage = 'Please use Face ID instead of passcode';
-          } else {
-            errorMessage = (result as any).error;
-          }
+        // Handle specific error cases without alerts
+        if (result.error === 'user_cancel') {
+          errorMessage = 'Authentication was cancelled';
+        } else if (result.error === 'lockout') {
+          errorMessage = 'Too many failed attempts. Try again later.';
+        } else if (result.error === 'lockout_permanent') {
+          errorMessage = 'Device is locked out from biometric authentication.';
+        } else if (result.error) {
+          errorMessage = result.error;
         }
         
-        return { 
-          success: false, 
-          error: errorMessage 
-        };
+        return { success: false, error: errorMessage };
       }
       
-      return { 
-        success: result.success, 
-        error: null
-      };
+      return { success: true };
     } catch (error) {
-      console.error('Error during simple biometric prompt:', error);
-      return { success: false, error: String(error) };
+      console.error('Error in biometric prompt:', error);
+      return { success: false, error: 'Authentication error occurred' };
     }
   }
 
@@ -682,6 +591,15 @@ export class BiometricsService {
    */
   static async storeCredentials(email: string, password: string): Promise<{ success: boolean; error?: string }> {
     try {
+      // Validate inputs
+      if (!email || !password) {
+        console.error('Cannot store empty credentials');
+        return { 
+          success: false, 
+          error: 'Cannot store empty credentials' 
+        };
+      }
+      
       // First ensure biometrics are available
       const { available } = await this.isSensorAvailable();
       if (!available) {
@@ -692,12 +610,14 @@ export class BiometricsService {
       }
       
       // Prompt user for biometric authentication before storing credentials
+      console.log('Prompting for biometric authentication to store credentials');
       const authResult = await LocalAuthentication.authenticateAsync({
         promptMessage: 'Authenticate to secure your credentials',
         disableDeviceFallback: false,
       });
       
       if (!authResult.success) {
+        console.log('Biometric authentication failed or was cancelled when storing credentials');
         return { 
           success: false, 
           error: 'Biometric authentication failed' 
@@ -707,7 +627,15 @@ export class BiometricsService {
       // Make sure keys exist or create them
       const { keysExist } = await this.biometricKeysExist();
       if (!keysExist) {
-        await this.createKeys();
+        console.log('No biometric keys exist, creating them now');
+        const { publicKey } = await this.createKeys();
+        if (!publicKey) {
+          console.error('Failed to create biometric keys');
+          return { 
+            success: false, 
+            error: 'Failed to set up biometric authentication' 
+          };
+        }
       }
       
       // Encrypt credentials (in a real app, this would use stronger encryption)
@@ -715,6 +643,16 @@ export class BiometricsService {
       
       // Store credentials in secure storage
       await SecureStore.setItemAsync(this.CREDENTIALS_STORAGE_KEY, credentials);
+      
+      // Verify the credentials were stored
+      const storedCredentials = await SecureStore.getItemAsync(this.CREDENTIALS_STORAGE_KEY);
+      if (!storedCredentials) {
+        console.error('Credentials storage verification failed');
+        return { 
+          success: false, 
+          error: 'Failed to store credentials securely' 
+        };
+      }
       
       console.log('Credentials stored securely with biometric protection');
       return { success: true };
@@ -735,19 +673,47 @@ export class BiometricsService {
     error?: string 
   }> {
     try {
+      console.log('Attempting to retrieve stored credentials with biometrics');
+      
       // Check if credentials exist
       const storedCredentials = await SecureStore.getItemAsync(this.CREDENTIALS_STORAGE_KEY);
       if (!storedCredentials) {
-        return { 
-          success: false, 
-          error: 'No stored credentials found. Please login with email and password first' 
+        console.log('No stored credentials found in SecureStore');
+        
+        // Check if keys exist, which would indicate the user has set up biometrics
+        // but credentials might have been lost
+        const { keysExist } = await this.biometricKeysExist();
+        if (keysExist) {
+          console.log('Biometric keys exist but no credentials stored - possible data loss');
+          return { 
+            success: false, 
+            error: 'Biometric credentials data has been lost. Please login with email and password to restore.' 
+          };
+        } else {
+          console.log('No biometric keys found - user needs to set up biometrics');
+          return { 
+            success: false, 
+            error: 'No stored credentials found. Please login with email and password first' 
+          };
+        }
+      }
+      
+      // Check if biometrics are available
+      const { available, biometryType } = await this.isSensorAvailable();
+      if (!available) {
+        console.log(`Biometrics not available: ${biometryType}`);
+        return {
+          success: false,
+          error: 'Biometric authentication is not available'
         };
       }
       
       // Prompt for biometric authentication
+      console.log(`Prompting for biometric authentication: ${promptMessage}`);
       const result = await this.simplePrompt(promptMessage);
       
       if (!result.success) {
+        console.log('Biometric authentication failed:', result.error);
         return { 
           success: false, 
           error: result.error || 'Biometric authentication failed' 
@@ -756,7 +722,18 @@ export class BiometricsService {
       
       // Decrypt and return credentials
       try {
+        console.log('Biometric authentication successful, parsing stored credentials');
         const credentials = JSON.parse(storedCredentials);
+        
+        // Validate credential format
+        if (!credentials.email || !credentials.password) {
+          console.error('Stored credentials are invalid format');
+          return {
+            success: false,
+            error: 'Stored credentials are corrupted or incomplete'
+          };
+        }
+        
         return { 
           success: true, 
           credentials: { 

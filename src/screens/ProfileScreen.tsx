@@ -4,15 +4,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SIZES } from '../constants/theme';
 import { useAuth } from '../context/AuthContext';
 import Card from '../components/common/Card';
-import BiometricSettings from '../components/authentication/BiometricSettings';
 import PersonalInfoForm from '../components/profile/PersonalInfoForm';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation/types';
 
 const ProfileScreen: React.FC = () => {
-  const { user, logout, isBiometricSupported } = useAuth();
-  const [showBiometricSettings, setShowBiometricSettings] = useState(false);
+  const { user, logout } = useAuth();
   const [showPersonalInfo, setShowPersonalInfo] = useState(false);
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
 
@@ -27,14 +25,6 @@ const ProfileScreen: React.FC = () => {
     );
   };
 
-  const handleShowBiometricSettings = () => {
-    setShowBiometricSettings(true);
-  };
-
-  const handleBiometricSettingsClose = () => {
-    setShowBiometricSettings(false);
-  };
-
   const handleShowPersonalInfo = () => {
     setShowPersonalInfo(true);
   };
@@ -43,23 +33,31 @@ const ProfileScreen: React.FC = () => {
     setShowPersonalInfo(false);
   };
 
-  // Simplified settings with only essential items
+  // Simplified settings with only personal information
   const settings = [
     {
-      title: 'Account & Security',
+      title: 'Account',
       items: [
         { 
           label: 'Personal Information', 
           icon: 'person', 
           action: handleShowPersonalInfo 
+        }
+      ]
+    },
+    {
+      title: 'Legal',
+      items: [
+        { 
+          label: 'Terms of Service', 
+          icon: 'document-text', 
+          action: () => {} 
         },
         { 
-          label: 'Biometric Authentication', 
-          icon: 'finger-print', 
-          action: handleShowBiometricSettings,
-          disabled: !isBiometricSupported
-        },
-        { label: 'FaceID Test', icon: 'scan-outline', action: () => navigation.navigate('FaceIDTest') }
+          label: 'Privacy Policy', 
+          icon: 'shield-checkmark', 
+          action: () => {} 
+        }
       ]
     }
   ];
@@ -92,26 +90,18 @@ const ProfileScreen: React.FC = () => {
                 key={itemIndex} 
                 style={[
                   styles.settingItem, 
-                  itemIndex === section.items.length - 1 ? { borderBottomWidth: 0 } : {},
-                  item.disabled ? styles.settingItemDisabled : {}
+                  itemIndex === section.items.length - 1 ? { borderBottomWidth: 0 } : {}
                 ]}
                 onPress={item.action}
-                disabled={item.disabled}
               >
-                <View style={[
-                  styles.settingIconContainer,
-                  item.disabled ? styles.settingIconDisabled : {}
-                ]}>
+                <View style={styles.settingIconContainer}>
                   <Ionicons 
                     name={item.icon as any} 
                     size={22} 
-                    color={item.disabled ? COLORS.textSecondary : COLORS.primary} 
+                    color={COLORS.primary} 
                   />
                 </View>
-                <Text style={[
-                  styles.settingLabel,
-                  item.disabled ? styles.settingLabelDisabled : {}
-                ]}>
+                <Text style={styles.settingLabel}>
                   {item.label}
                 </Text>
                 <Ionicons name="chevron-forward" size={18} color={COLORS.textSecondary} />
@@ -121,32 +111,14 @@ const ProfileScreen: React.FC = () => {
         ))}
 
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <Ionicons name="log-out" size={22} color={COLORS.danger} />
+          <View style={styles.logoutIconContainer}>
+            <Ionicons name="log-out-outline" size={24} color={COLORS.danger} />
+          </View>
           <Text style={styles.logoutText}>Logout</Text>
         </TouchableOpacity>
 
         <Text style={styles.versionText}>Version 1.0.0</Text>
       </ScrollView>
-
-      {/* Biometric Settings Modal */}
-      <Modal
-        visible={showBiometricSettings}
-        animationType="slide"
-        transparent={false}
-        onRequestClose={handleBiometricSettingsClose}
-      >
-        <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }}>
-          <View style={styles.modalHeader}>
-            <TouchableOpacity style={styles.closeButton} onPress={handleBiometricSettingsClose}>
-              <Ionicons name="close" size={24} color={COLORS.text} />
-            </TouchableOpacity>
-            <Text style={styles.modalTitle}>Biometric Authentication</Text>
-            <View style={{ width: 40 }} />
-          </View>
-            
-          <BiometricSettings />
-        </SafeAreaView>
-      </Modal>
 
       {/* Personal Information Modal */}
       <Modal
@@ -221,6 +193,7 @@ const styles = StyleSheet.create({
   },
   settingsCard: {
     marginBottom: 16,
+    borderRadius: 24,
   },
   sectionTitle: {
     fontSize: 18,
@@ -235,9 +208,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
   },
-  settingItemDisabled: {
-    opacity: 0.6,
-  },
   settingIconContainer: {
     width: 36,
     height: 36,
@@ -247,32 +217,30 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: 16,
   },
-  settingIconDisabled: {
-    backgroundColor: COLORS.border,
-  },
   settingLabel: {
     fontSize: 16,
     color: COLORS.text,
     flex: 1,
   },
-  settingLabelDisabled: {
-    color: COLORS.textSecondary,
-  },
   logoutButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 14,
-    marginTop: 8,
+    paddingVertical: 16,
+    marginTop: 24,
     marginBottom: 20,
     borderRadius: SIZES.radius,
     backgroundColor: COLORS.danger + '10',
+    borderWidth: 1,
+    borderColor: COLORS.danger + '20',
+  },
+  logoutIconContainer: {
+    marginRight: 8,
   },
   logoutText: {
     fontSize: 16,
     fontWeight: '600',
     color: COLORS.danger,
-    marginLeft: 8,
   },
   versionText: {
     textAlign: 'center',

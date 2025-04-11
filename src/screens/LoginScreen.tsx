@@ -6,229 +6,181 @@ import {
   TextInput, 
   TouchableOpacity, 
   SafeAreaView, 
-  KeyboardAvoidingView, 
+  KeyboardAvoidingView,
   Platform,
-  ScrollView,
-  Alert
+  ScrollView
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { RootStackParamList } from '../navigation/types';
 import { useAuth } from '../context/AuthContext';
 import { COLORS, SIZES } from '../constants/theme';
 import Button from '../components/common/Button';
 import Card from '../components/common/Card';
 import { Ionicons } from '@expo/vector-icons';
-import BiometricPrompt from '../components/authentication/BiometricPrompt';
-import BiometricEnrollmentPrompt from '../components/authentication/BiometricEnrollmentPrompt';
-import { BiometricsService } from '../services/BiometricsService';
 
 const LoginScreen: React.FC = () => {
+  const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   const { 
     authenticateWithCredentials, 
     authenticateWithBiometrics,
-    isBiometricSupported, 
-    biometricType,
+    isBiometricSupported,
     biometricTypeName,
-    error,
+    error: authError,
     clearError,
-    isLoading,
-    showBiometricEnrollment,
-    handleBiometricEnrollmentDecision
+    isLoading 
   } = useAuth();
-  const navigation = useNavigation();
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [passwordVisible, setPasswordVisible] = useState(false);
-  const [showBiometricPrompt, setShowBiometricPrompt] = useState(false);
-  const [showEmailPassword, setShowEmailPassword] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   
   useEffect(() => {
-    if (error) {
-      // Auto-clear error after 5 seconds
-      const timer = setTimeout(() => {
-        clearError();
-      }, 5000);
-      
-      return () => clearTimeout(timer);
+    if (authError) {
+      setErrorMessage(authError);
     }
-  }, [error, clearError]);
-
-  // Check for stored credentials and show biometric prompt if available
-  useEffect(() => {
-    const checkStoredCredentials = async () => {
-      if (isBiometricSupported) {
-        // Check if biometric keys and credentials exist
-        const { keysExist } = await BiometricsService.biometricKeysExist();
-        
-        if (keysExist) {
-          // If we have credentials stored, show biometric prompt
-          setShowBiometricPrompt(true);
-          setShowEmailPassword(false);
-        } else {
-          // Fall back to email/password if no stored credentials
-          setShowBiometricPrompt(false);
-          setShowEmailPassword(true);
-        }
-      } else {
-        // Fall back to email/password if biometrics not supported
-        setShowBiometricPrompt(false);
-        setShowEmailPassword(true);
-      }
-    };
-    
-    checkStoredCredentials();
-  }, [isBiometricSupported]);
-
+  }, [authError]);
+  
   const handleLogin = async () => {
-    if (!email.trim() || !password.trim()) {
-      Alert.alert('Missing Fields', 'Please enter both email and password');
+    clearError();
+    setErrorMessage(null);
+    
+    // Basic validation
+    if (!email.trim()) {
+      setErrorMessage('Please enter your email address');
       return;
     }
     
-    await authenticateWithCredentials(email, password);
-  };
-
-  const handleBiometricCancel = () => {
-    setShowBiometricPrompt(false);
-    setShowEmailPassword(true);
-  };
-
-  const handleBiometricAuth = async () => {
-    await authenticateWithBiometrics();
-  };
-
-  const getBiometricIcon = () => {
-    switch (biometricType) {
-      case 'FaceID':
-        return 'scan-outline';
-      case 'TouchID':
-        return 'finger-print';
-      default:
-        return 'lock-closed';
+    if (!password) {
+      setErrorMessage('Please enter your password');
+      return;
+    }
+    
+    // Perform login
+    const success = await authenticateWithCredentials(email, password);
+    
+    if (success) {
+      // Navigation is handled by the auth context
+      console.log('Login successful');
     }
   };
-
-  // Automatically attempt biometric auth when the prompt is shown
-  useEffect(() => {
-    if (showBiometricPrompt) {
-      handleBiometricAuth();
+  
+  const handleBiometricLogin = async () => {
+    clearError();
+    setErrorMessage(null);
+    
+    const success = await authenticateWithBiometrics();
+    
+    if (!success && !authError) {
+      setErrorMessage('Biometric authentication failed. Please try again or use email and password.');
     }
-  }, [showBiometricPrompt]);
-
+  };
+  
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <KeyboardAvoidingView 
-        style={styles.keyboardAvoidingView}
+    <SafeAreaView style={styles.container}>
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoidView}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <ScrollView 
-          contentContainerStyle={styles.scrollView}
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
         >
-          <View style={styles.container}>
-            <View style={styles.logoContainer}>
-              <Text style={styles.logo}>Ryt</Text>
-              <Text style={styles.logoSubtitle}>Bank</Text>
-            </View>
-
-            {showEmailPassword ? (
-              <Card style={styles.card} shadowType="medium">
-                <Text style={styles.title}>Login to Your Account</Text>
-                
-                {/* Display inline error message instead of alert */}
-                {error && (
-                  <View style={styles.errorContainer}>
-                    <Text style={styles.errorText}>{error}</Text>
-                  </View>
-                )}
-                
-                <View style={styles.inputContainer}>
-                  <Text style={styles.inputLabel}>Email</Text>
-                  <View style={styles.inputWrapper}>
-                    <Ionicons name="mail-outline" size={20} color={COLORS.textSecondary} style={styles.inputIcon} />
-                    <TextInput
-                      style={styles.input}
-                      placeholder="Enter your email"
-                      placeholderTextColor={COLORS.textSecondary}
-                      value={email}
-                      onChangeText={setEmail}
-                      autoCapitalize="none"
-                      keyboardType="email-address"
-                    />
-                  </View>
+          <View style={styles.header}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => navigation.goBack()}
+            >
+              <Ionicons name="arrow-back" size={24} color={COLORS.text} />
+            </TouchableOpacity>
+            <Text style={styles.title}>Welcome Back</Text>
+          </View>
+          
+          <Card style={styles.card}>
+            <View style={styles.formContainer}>
+              {errorMessage && (
+                <View style={styles.errorContainer}>
+                  <Text style={styles.errorText}>{errorMessage}</Text>
                 </View>
-
+              )}
+              
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Email</Text>
                 <View style={styles.inputContainer}>
-                  <Text style={styles.inputLabel}>Password</Text>
-                  <View style={styles.inputWrapper}>
-                    <Ionicons name="lock-closed-outline" size={20} color={COLORS.textSecondary} style={styles.inputIcon} />
-                    <TextInput
-                      style={styles.input}
-                      placeholder="Enter your password"
-                      placeholderTextColor={COLORS.textSecondary}
-                      value={password}
-                      onChangeText={setPassword}
-                      secureTextEntry={!passwordVisible}
-                    />
-                    <TouchableOpacity 
-                      style={styles.passwordToggle}
-                      onPress={() => setPasswordVisible(!passwordVisible)}
-                    >
-                      <Ionicons 
-                        name={passwordVisible ? "eye-off-outline" : "eye-outline"} 
-                        size={20} 
-                        color={COLORS.textSecondary} 
-                      />
-                    </TouchableOpacity>
-                  </View>
+                  <Ionicons name="mail-outline" size={20} color={COLORS.textSecondary} style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Your email address"
+                    value={email}
+                    onChangeText={setEmail}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    placeholderTextColor={COLORS.textSecondary}
+                  />
                 </View>
-
-                <Button
-                  title="Log In"
-                  onPress={handleLogin}
-                  loading={isLoading}
-                  style={styles.button}
-                />
-
-                {isBiometricSupported && (
-                  <TouchableOpacity 
-                    style={styles.biometricButton}
-                    onPress={() => setShowBiometricPrompt(true)}
-                    disabled={isLoading}
+              </View>
+              
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Password</Text>
+                <View style={styles.inputContainer}>
+                  <Ionicons name="lock-closed-outline" size={20} color={COLORS.textSecondary} style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Your password"
+                    value={password}
+                    onChangeText={setPassword}
+                    secureTextEntry={!passwordVisible}
+                    placeholderTextColor={COLORS.textSecondary}
+                  />
+                  <TouchableOpacity
+                    style={styles.visibilityIcon}
+                    onPress={() => setPasswordVisible(!passwordVisible)}
                   >
-                    <Ionicons name={getBiometricIcon()} size={24} color={COLORS.primary} />
-                    <Text style={styles.biometricText}>
-                      Login with {biometricTypeName}
-                    </Text>
-                  </TouchableOpacity>
-                )}
-              </Card>
-            ) : showBiometricPrompt ? (
-              <Card style={styles.card} shadowType="medium">
-                <View style={styles.biometricPromptContainer}>
-                  <Ionicons name={getBiometricIcon()} size={64} color={COLORS.primary} style={styles.biometricPromptIcon} />
-                  <Text style={styles.biometricPromptTitle}>Sign In</Text>
-                  <Text style={styles.biometricPromptText}>
-                    Use {biometricTypeName} to sign in to your account
-                  </Text>
-                  
-                  <TouchableOpacity 
-                    style={styles.usePasswordButton} 
-                    onPress={handleBiometricCancel}
-                  >
-                    <Text style={styles.usePasswordText}>Use email and password instead</Text>
+                    <Ionicons
+                      name={passwordVisible ? 'eye-off-outline' : 'eye-outline'}
+                      size={20}
+                      color={COLORS.textSecondary}
+                    />
                   </TouchableOpacity>
                 </View>
-              </Card>
-            ) : null}
-            
-            {/* Biometric enrollment prompt */}
-            {showBiometricEnrollment && (
-              <BiometricEnrollmentPrompt 
-                onAccept={() => handleBiometricEnrollmentDecision(true)}
-                onDecline={() => handleBiometricEnrollmentDecision(false)}
+              </View>
+              
+              <TouchableOpacity style={styles.forgotPassword}>
+                <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+              </TouchableOpacity>
+              
+              <Button
+                title="Login"
+                onPress={handleLogin}
+                style={styles.loginButton}
+                loading={isLoading}
               />
-            )}
+              
+              {isBiometricSupported && (
+                <TouchableOpacity
+                  style={styles.biometricButton}
+                  onPress={handleBiometricLogin}
+                  disabled={isLoading}
+                >
+                  <Ionicons
+                    name={biometricTypeName === 'FaceID' ? 'scan-outline' : 'finger-print'}
+                    size={22}
+                    color={COLORS.primary}
+                  />
+                  <Text style={styles.biometricText}>
+                    Login with {biometricTypeName}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </Card>
+          
+          <View style={styles.footer}>
+            <Text style={styles.footerText}>Don't have an account?</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('Onboarding')}>
+              <Text style={styles.signUpText}>Sign Up</Text>
+            </TouchableOpacity>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -237,84 +189,76 @@ const LoginScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  safeArea: {
+  container: {
     flex: 1,
     backgroundColor: COLORS.background,
   },
-  keyboardAvoidingView: {
+  keyboardAvoidView: {
     flex: 1,
   },
-  scrollView: {
+  scrollContent: {
     flexGrow: 1,
-    justifyContent: 'center',
-  },
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
     padding: SIZES.padding,
   },
-  logoContainer: {
+  header: {
+    marginBottom: 24,
     flexDirection: 'row',
-    alignItems: 'baseline',
-    marginBottom: 40,
+    alignItems: 'center',
   },
-  logo: {
-    fontSize: 42,
-    fontWeight: 'bold',
-    color: COLORS.primary,
-    letterSpacing: 1,
-  },
-  logoSubtitle: {
-    fontSize: 28,
-    fontWeight: '500',
-    color: COLORS.text,
-    marginLeft: 4,
-  },
-  card: {
-    width: '100%',
-    maxWidth: 400,
-    padding: SIZES.padding * 1.5,
+  backButton: {
+    padding: 8,
+    marginRight: 12,
   },
   title: {
     fontSize: 24,
-    fontWeight: '600',
+    fontWeight: 'bold',
     color: COLORS.text,
-    marginBottom: 24,
-    textAlign: 'center',
   },
-  inputContainer: {
+  card: {
+    borderRadius: SIZES.radius,
+    marginBottom: 24,
+  },
+  formContainer: {
+    padding: SIZES.padding,
+  },
+  inputGroup: {
     marginBottom: 16,
   },
-  inputLabel: {
+  label: {
     fontSize: 14,
     fontWeight: '500',
-    color: COLORS.text,
     marginBottom: 8,
+    color: COLORS.text,
   },
-  inputWrapper: {
+  inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
     borderColor: COLORS.border,
     borderRadius: SIZES.radius,
-    backgroundColor: COLORS.card,
-    height: 50,
+    paddingHorizontal: 12,
+    height: 48,
   },
   inputIcon: {
-    marginLeft: 12,
+    marginRight: 8,
   },
   input: {
     flex: 1,
     height: '100%',
-    paddingHorizontal: 12,
     color: COLORS.text,
   },
-  passwordToggle: {
-    padding: 12,
+  visibilityIcon: {
+    padding: 4,
   },
-  button: {
-    marginTop: 24,
+  forgotPassword: {
+    alignSelf: 'flex-end',
+    marginVertical: 16,
+  },
+  forgotPasswordText: {
+    color: COLORS.primary,
+    fontWeight: '500',
+  },
+  loginButton: {
     marginBottom: 16,
   },
   biometricButton: {
@@ -322,49 +266,40 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: 12,
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+    borderRadius: SIZES.radius,
+    backgroundColor: 'transparent',
   },
   biometricText: {
     color: COLORS.primary,
     fontWeight: '500',
     marginLeft: 8,
   },
-  biometricPromptContainer: {
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
     alignItems: 'center',
-    padding: SIZES.padding,
+    marginVertical: 16,
   },
-  biometricPromptIcon: {
-    marginBottom: 20,
-  },
-  biometricPromptTitle: {
-    fontSize: 24,
-    fontWeight: '600',
-    color: COLORS.text,
-    marginBottom: 8,
-  },
-  biometricPromptText: {
-    fontSize: 16,
+  footerText: {
     color: COLORS.textSecondary,
-    marginBottom: 32,
-    textAlign: 'center',
   },
-  usePasswordButton: {
-    marginTop: 16,
-    padding: 8,
-  },
-  usePasswordText: {
-    color: COLORS.textSecondary,
+  signUpText: {
+    color: COLORS.primary,
     fontWeight: '500',
+    marginLeft: 4,
   },
   errorContainer: {
-    backgroundColor: COLORS.danger + '20',
-    padding: SIZES.padding,
-    borderRadius: SIZES.radius,
+    backgroundColor: 'rgba(255, 0, 0, 0.1)',
+    padding: 12,
+    borderRadius: 8,
     marginBottom: 16,
   },
   errorText: {
     color: COLORS.danger,
-    fontWeight: '500',
-  }
+    textAlign: 'center',
+  },
 });
 
 export default LoginScreen; 

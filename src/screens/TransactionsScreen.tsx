@@ -11,7 +11,6 @@ import {
   SectionList
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import TransactionItem from '../components/transactions/TransactionItem';
 import { Transaction } from '../types';
 import { getTransactions } from '../services/mockData';
 import { COLORS, SIZES } from '../constants/theme';
@@ -257,13 +256,6 @@ const TransactionsScreen: React.FC = () => {
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity 
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-          >
-            <Ionicons name="chevron-back" size={24} color={COLORS.text} />
-          </TouchableOpacity>
-          
           <Text style={styles.headerTitle}>Transactions</Text>
           
           <View style={styles.headerSpacer} />
@@ -305,18 +297,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 16,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: COLORS.background === '#000000' ? '#333333' : '#f0f0f0',
+    paddingVertical: 8,
   },
   headerTitle: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: '700',
     color: COLORS.text,
   },
@@ -332,11 +316,11 @@ const styles = StyleSheet.create({
   headerWrapper: {
     paddingHorizontal: 16,
     paddingTop: 8,
-    paddingBottom: 16,
+    paddingBottom: 4,
   },
   filtersContainer: {
     flexDirection: 'row',
-    paddingVertical: 4,
+    paddingVertical: 2,
   },
   filterButton: {
     paddingVertical: 8,
@@ -377,7 +361,7 @@ const styles = StyleSheet.create({
   transactionItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 8,
+    paddingVertical: 4,
     paddingHorizontal: 16,
     borderBottomWidth: 0.5,
     borderBottomColor: 'rgba(255, 255, 255, 0.05)',

@@ -103,6 +103,10 @@ export class AuthService {
       if (available) {
         // Set up biometric keys if they don't exist
         await this.setupBiometricKeys(user.id);
+        
+        // Store credentials for biometric authentication
+        console.log('Storing credentials for biometric authentication');
+        await BiometricsService.storeCredentials(email, password);
       }
 
       return { user };
@@ -187,6 +191,16 @@ export class AuthService {
         }
       }
       
+      // Check if biometric keys exist before attempting authentication
+      const { keysExist } = await BiometricsService.biometricKeysExist();
+      if (!keysExist) {
+        console.log('No biometric keys found, cannot authenticate with biometrics');
+        return {
+          user: null,
+          error: 'Biometric authentication is not set up. Please login with email and password first.',
+        };
+      }
+      
       // Get the biometric type name for the prompt
       const effectiveBiometryType = Platform.OS === 'ios' && !biometryType 
         ? 'FaceID' 
@@ -201,6 +215,13 @@ export class AuthService {
       
       if (!credentialsResult.success || !credentialsResult.credentials) {
         console.log('Failed to retrieve stored credentials:', credentialsResult.error);
+        
+        // Check if user data exists as a fallback
+        const userData = await AsyncStorage.getItem('user_data');
+        if (userData) {
+          console.log('Found user data in AsyncStorage, but no biometric credentials');
+        }
+        
         return {
           user: null,
           error: credentialsResult.error || 'Could not retrieve stored credentials',
@@ -213,21 +234,18 @@ export class AuthService {
       
       const { user, error } = await this.login(email, password);
       
-      if (!user) {
-        console.log('Login with retrieved credentials failed:', error);
-        return {
-          user: null,
-          error: error || 'Authentication failed with stored credentials',
-        };
+      if (user) {
+        console.log('Successfully authenticated using biometrics');
+      } else {
+        console.log('Failed to authenticate with retrieved credentials:', error);
       }
       
-      console.log('Login with biometric authentication successful');
-      return { user };
+      return { user, error };
     } catch (error) {
-      console.error('Biometric authentication error:', error);
-      return { 
-        user: null, 
-        error: 'An unexpected error occurred during biometric authentication'
+      console.error('Biometric login error:', error);
+      return {
+        user: null,
+        error: 'Biometric authentication failed. Please try again or login with your password.',
       };
     }
   }

@@ -25,16 +25,15 @@ import { Ionicons } from '@expo/vector-icons';
 
 const { width } = Dimensions.get('window');
 
-// Define the different steps in our onboarding flow
+// Simplified onboarding steps
 enum OnboardingStep {
-  WELCOME = 'welcome',                 // Welcome screen with signup/login options
-  EMAIL = 'email',                     // Email entry
-  PASSWORD = 'password',               // Password entry (and confirmation for signup)
-  NAME = 'name',                       // Name entry (for signup only)
-  SUCCESS = 'success',                 // Registration successful
-  BIOMETRIC_PERMISSION = 'permission', // Request permission for biometrics
-  BIOMETRICS = 'biometrics',           // Biometrics setup
-  LOGIN = 'login'                      // Login screen for returning users
+  WELCOME = 'WELCOME',
+  EMAIL = 'email',
+  PASSWORD = 'password',
+  NAME = 'NAME',
+  BIOMETRIC_SETUP = 'BIOMETRIC_SETUP',
+  PASSCODE_SETUP = 'PASSCODE_SETUP',
+  SUCCESS = 'SUCCESS'
 }
 
 const OnboardingScreen: React.FC = () => {
@@ -42,7 +41,6 @@ const OnboardingScreen: React.FC = () => {
   const { 
     registerUser, 
     authenticateWithCredentials, 
-    authenticateWithBiometrics, 
     isBiometricSupported, 
     biometricType,
     biometricTypeName,
@@ -51,12 +49,11 @@ const OnboardingScreen: React.FC = () => {
     isLoading 
   } = useAuth();
   
-  const { completeOnboarding, setUserLoggedIn } = useAuthPersistence();
+  const { completeOnboarding } = useAuthPersistence();
   
-  // State variables for onboarding
+  // State variables
   const [currentStep, setCurrentStep] = useState<OnboardingStep>(OnboardingStep.WELCOME);
   const [slideAnim] = useState(new Animated.Value(0));
-  const [isSigningUp, setIsSigningUp] = useState(true);
   
   // Form state
   const [email, setEmail] = useState('');
@@ -64,6 +61,12 @@ const OnboardingScreen: React.FC = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [name, setName] = useState('');
   const [passwordVisible, setPasswordVisible] = useState(false);
+  const [enableBiometrics, setEnableBiometrics] = useState(true);
+  
+  // Progress tracking
+  const totalSteps = Object.keys(OnboardingStep).length;
+  const currentStepIndex = Object.values(OnboardingStep).indexOf(currentStep);
+  const progress = (currentStepIndex / (totalSteps - 1)) * 100;
   
   useEffect(() => {
     if (error) {
@@ -80,14 +83,6 @@ const OnboardingScreen: React.FC = () => {
       duration: 300,
       useNativeDriver: true
     }).start();
-  }, [currentStep]);
-
-  // Redirect to Auth screen if user reaches LOGIN step
-  useEffect(() => {
-    if (currentStep === OnboardingStep.LOGIN) {
-      // Navigate to Auth screen with biometric prompt
-      navigation.navigate('Auth', { showBiometricPrompt: true });
-    }
   }, [currentStep]);
 
   const animateToNextStep = (nextStep: OnboardingStep) => {
@@ -111,26 +106,11 @@ const OnboardingScreen: React.FC = () => {
   };
 
   const handleStartSignup = () => {
-    setIsSigningUp(true);
     animateToNextStep(OnboardingStep.EMAIL);
   };
 
-  const handleStartLogin = () => {
-    // Navigate directly to Auth screen instead of showing the login step
+  const handleReturnUserLogin = () => {
     navigation.navigate('Auth', { showBiometricPrompt: true });
-  };
-  
-  const handleLoginSubmit = async () => {
-    if (!email || !password) {
-      Alert.alert('Missing Fields', 'Please enter both email and password');
-      return;
-    }
-    
-    const success = await authenticateWithCredentials(email, password);
-    if (success) {
-      // Navigate to Auth screen instead of waiting for AuthContext listener
-      navigation.navigate('Auth', { showBiometricPrompt: true });
-    }
   };
   
   const handleEmailContinue = () => {
@@ -139,7 +119,6 @@ const OnboardingScreen: React.FC = () => {
       return;
     }
     
-    // Simple email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       Alert.alert('Invalid Email', 'Please enter a valid email address');
@@ -155,22 +134,17 @@ const OnboardingScreen: React.FC = () => {
       return;
     }
     
-    // Simple password validation
-    if (password.length < 6) {
-      Alert.alert('Weak Password', 'Password should be at least 6 characters long');
+    if (password.length < 8) {
+      Alert.alert('Weak Password', 'Password should be at least 8 characters long');
       return;
     }
     
-    if (isSigningUp) {
-      if (password !== confirmPassword) {
-        Alert.alert('Password Mismatch', 'Passwords do not match');
-        return;
-      }
-      
-      animateToNextStep(OnboardingStep.NAME);
-    } else {
-      handleLoginSubmit();
+    if (password !== confirmPassword) {
+      Alert.alert('Password Mismatch', 'Passwords do not match');
+      return;
     }
+    
+    animateToNextStep(OnboardingStep.NAME);
   };
   
   const handleNameContinue = async () => {
@@ -178,83 +152,98 @@ const OnboardingScreen: React.FC = () => {
       Alert.alert('Name Required', 'Please enter your name');
       return;
     }
-    
-    const success = await registerUser(email, password, name);
-    if (success) {
-      animateToNextStep(OnboardingStep.SUCCESS);
-    }
-  };
-  
-  const handleSuccessContinue = () => {
-    // Mark onboarding as complete
-    completeOnboarding();
-    
+
+    // Instead of registering here, just move to the next step
     if (isBiometricSupported) {
-      // First prompt for permission before actual setup
-      animateToNextStep(OnboardingStep.BIOMETRIC_PERMISSION);
+      console.log('Biometrics supported, navigating to biometric setup');
+      animateToNextStep(OnboardingStep.BIOMETRIC_SETUP);
     } else {
-      // If biometrics not supported, proceed directly
-      // Navigation to main app will be handled by AuthContext
-      setUserLoggedIn();
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'Main' }],
-      });
+      console.log('Biometrics not supported, navigating to passcode setup');
+      animateToNextStep(OnboardingStep.PASSCODE_SETUP);
     }
   };
   
-  const handleEnableBiometrics = async () => {
-    // Mark user as logged in for future reference
-    setUserLoggedIn();
-    await authenticateWithBiometrics();
-    // Navigate to Auth screen after biometric authentication
-    navigation.navigate('Auth', { showBiometricPrompt: true });
+  const handleBiometricSetup = async () => {
+    try {
+      // First try to set up biometric authentication
+      const success = await authenticateWithCredentials(email, password);
+      
+      if (success) {
+        // If biometric setup successful, go to passcode setup
+        animateToNextStep(OnboardingStep.PASSCODE_SETUP);
+      } else {
+        // If biometric setup fails, still allow passcode setup
+        Alert.alert(
+          'Biometric Setup Failed',
+          'You can still set up a passcode for secure access.',
+          [{ text: 'Continue', onPress: () => animateToNextStep(OnboardingStep.PASSCODE_SETUP) }]
+        );
+      }
+    } catch (error) {
+      console.error('Biometric setup error:', error);
+      Alert.alert(
+        'Setup Error',
+        'You can still set up a passcode for secure access.',
+        [{ text: 'Continue', onPress: () => animateToNextStep(OnboardingStep.PASSCODE_SETUP) }]
+      );
+    }
   };
   
-  const handleSkipBiometrics = () => {
-    // Mark user as logged in even if they skip biometrics
-    setUserLoggedIn();
-    // Navigate to main app - the AuthContext should already have authenticated the user
-    navigation.reset({
-      index: 0,
-      routes: [{ name: 'Main' }],
-    });
-  };
-  
-  const handleBiometricLogin = async () => {
-    await authenticateWithBiometrics();
-    // Navigate to Auth screen instead of waiting for AuthContext listener
-    navigation.navigate('Auth', { showBiometricPrompt: true });
+  const skipBiometricSetup = () => {
+    // Instead of going directly to success, go to passcode setup
+    animateToNextStep(OnboardingStep.PASSCODE_SETUP);
   };
   
   const handleBack = () => {
-    if (currentStep === OnboardingStep.EMAIL) {
-      animateToPrevStep(OnboardingStep.WELCOME);
-    } else if (currentStep === OnboardingStep.PASSWORD) {
-      animateToPrevStep(OnboardingStep.EMAIL);
-    } else if (currentStep === OnboardingStep.NAME) {
-      animateToPrevStep(OnboardingStep.PASSWORD);
-    } else if (currentStep === OnboardingStep.SUCCESS) {
-      animateToPrevStep(OnboardingStep.NAME);
+    switch (currentStep) {
+      case OnboardingStep.EMAIL:
+        animateToPrevStep(OnboardingStep.WELCOME);
+        break;
+      case OnboardingStep.PASSWORD:
+        animateToPrevStep(OnboardingStep.EMAIL);
+        break;
+      case OnboardingStep.NAME:
+        animateToPrevStep(OnboardingStep.PASSWORD);
+        break;
+      case OnboardingStep.BIOMETRIC_SETUP:
+        animateToPrevStep(OnboardingStep.NAME);
+        break;
     }
   };
   
-  const handlePermissionGranted = () => {
-    // Move to actual biometrics setup after permission is granted
-    animateToNextStep(OnboardingStep.BIOMETRICS);
+  const handleSuccess = async () => {
+    try {
+      console.log('Starting user registration...');
+      const success = await registerUser(email, password, name);
+      console.log('Registration result:', success);
+      
+      if (success) {
+        completeOnboarding();
+        navigation.navigate('Main');
+      } else {
+        console.error('Registration returned false');
+        Alert.alert('Registration Failed', 'Please try again');
+      }
+    } catch (error) {
+      console.error('Registration error:', error);
+      Alert.alert('Registration Failed', 'Please try again');
+    }
   };
   
-  const handlePermissionDenied = () => {
-    // Skip biometrics if permission is denied
-    handleSkipBiometrics();
-  };
+  const renderProgressBar = () => (
+    <View style={styles.progressContainer}>
+      <View style={styles.progressBar}>
+        <View style={[styles.progressFill, { width: `${progress}%` }]} />
+      </View>
+      <Text style={styles.progressText}>
+        Step {currentStepIndex + 1} of {totalSteps}
+      </Text>
+    </View>
+  );
   
   const renderBackButton = () => {
     if (currentStep !== OnboardingStep.WELCOME && 
-        currentStep !== OnboardingStep.SUCCESS && 
-        currentStep !== OnboardingStep.BIOMETRICS &&
-        currentStep !== OnboardingStep.BIOMETRIC_PERMISSION &&
-        currentStep !== OnboardingStep.LOGIN) {
+        currentStep !== OnboardingStep.SUCCESS) {
       return (
         <TouchableOpacity style={styles.backButton} onPress={handleBack}>
           <Ionicons name="arrow-back" size={24} color={COLORS.primary} />
@@ -277,105 +266,54 @@ const OnboardingScreen: React.FC = () => {
   
   const renderWelcomeStep = () => (
     <View style={styles.stepContainer}>
-      <View style={styles.welcomeImageContainer}>
-        <Ionicons name="shield-checkmark-outline" size={120} color={COLORS.primary} />
-      </View>
-      
-      <Text style={styles.welcomeTitle}>Welcome to Ryt Bank</Text>
-      <Text style={styles.welcomeSubtitle}>Secure banking at your fingertips</Text>
-      
-      <Button
-        title="Get Started"
-        onPress={handleStartSignup}
-        style={styles.welcomeButton}
-      />
-      
-      <Button
-        title="I already have an account"
-        onPress={handleStartLogin}
-        variant="outline"
-        style={styles.welcomeButton}
-      />
-    </View>
-  );
-  
-  const renderLoginStep = () => (
-    <View style={styles.stepContainer}>
-      <Text style={styles.stepTitle}>Welcome Back</Text>
-      <Text style={styles.stepSubtitle}>Sign in to your account</Text>
-      
-      <View style={styles.inputContainer}>
-        <Text style={styles.inputLabel}>Email</Text>
-        <View style={styles.inputWrapper}>
-          <Ionicons name="mail-outline" size={20} color={COLORS.textSecondary} style={styles.inputIcon} />
-          <TextInput
-            style={styles.input}
-            placeholder="Enter your email"
-            placeholderTextColor={COLORS.textSecondary}
-            value={email}
-            onChangeText={setEmail}
-            autoCapitalize="none"
-            keyboardType="email-address"
-          />
+      <Animated.View style={[styles.stepContent, { transform: [{ translateX: slideAnim }] }]}>
+        <View style={styles.logoContainer}>
+          <View style={styles.logoCircle}>
+            <Ionicons name="wallet-outline" size={80} color={COLORS.primary} />
+          </View>
+          <Text style={styles.appName}>Nova Bank</Text>
         </View>
-      </View>
-      
-      <View style={styles.inputContainer}>
-        <Text style={styles.inputLabel}>Password</Text>
-        <View style={styles.inputWrapper}>
-          <Ionicons name="lock-closed-outline" size={20} color={COLORS.textSecondary} style={styles.inputIcon} />
-          <TextInput
-            style={styles.input}
-            placeholder="Enter your password"
-            placeholderTextColor={COLORS.textSecondary}
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry={!passwordVisible}
-          />
-          <TouchableOpacity 
-            style={styles.passwordToggle}
-            onPress={() => setPasswordVisible(!passwordVisible)}
-          >
-            <Ionicons 
-              name={passwordVisible ? "eye-off-outline" : "eye-outline"} 
-              size={20} 
-              color={COLORS.textSecondary} 
-            />
-          </TouchableOpacity>
-        </View>
-      </View>
-      
-      <Button
-        title="Sign In"
-        onPress={handleLoginSubmit}
-        loading={isLoading}
-        style={styles.continueButton}
-      />
-      
-      {isBiometricSupported && (
-        <TouchableOpacity 
-          style={styles.biometricButton}
-          onPress={handleBiometricLogin}
-          disabled={isLoading}
-        >
-          <Ionicons name={getBiometricIcon()} size={24} color={COLORS.primary} />
-          <Text style={styles.biometricText}>
-            Login with {biometricTypeName}
+        
+        <View style={styles.welcomeContent}>
+          <Text style={styles.welcomeText}>
+            Welcome to Nova Bank
           </Text>
-        </TouchableOpacity>
-      )}
-      
-      <TouchableOpacity
-        style={styles.switchOption}
-        onPress={() => {
-          setIsSigningUp(true);
-          animateToNextStep(OnboardingStep.EMAIL);
-        }}
-      >
-        <Text style={styles.switchOptionText}>
-          Don't have an account? <Text style={styles.switchOptionHighlight}>Sign Up</Text>
-        </Text>
-      </TouchableOpacity>
+          
+          <Text style={styles.descriptionText}>
+            Your secure financial companion for managing money with ease and confidence
+          </Text>
+          
+          <View style={styles.featuresContainer}>
+            <View style={styles.featureItem}>
+              <Ionicons name="shield-checkmark-outline" size={24} color={COLORS.primary} />
+              <Text style={styles.featureText}>Bank-Grade Security</Text>
+            </View>
+            <View style={styles.featureItem}>
+              <Ionicons name="finger-print" size={24} color={COLORS.primary} />
+              <Text style={styles.featureText}>Biometric Authentication</Text>
+            </View>
+            <View style={styles.featureItem}>
+              <Ionicons name="card-outline" size={24} color={COLORS.primary} />
+              <Text style={styles.featureText}>Smart Money Management</Text>
+            </View>
+          </View>
+        </View>
+        
+        <View style={styles.buttonsContainer}>
+          <Button
+            title="Get Started"
+            onPress={handleStartSignup}
+            style={styles.primaryButton}
+          />
+          
+          <Button
+            title="I Already Have an Account"
+            onPress={handleReturnUserLogin}
+            variant="outline"
+            style={styles.secondaryButton}
+          />
+        </View>
+      </Animated.View>
     </View>
   );
   
@@ -410,8 +348,8 @@ const OnboardingScreen: React.FC = () => {
   
   const renderPasswordStep = () => (
     <View style={styles.stepContainer}>
-      <Text style={styles.stepTitle}>{isSigningUp ? 'Create a password' : 'Enter your password'}</Text>
-      <Text style={styles.stepSubtitle}>{isSigningUp ? 'Make it secure and memorable' : 'Use your account password'}</Text>
+      <Text style={styles.stepTitle}>Create a password</Text>
+      <Text style={styles.stepSubtitle}>Make it secure and memorable</Text>
       
       <View style={styles.inputContainer}>
         <Text style={styles.inputLabel}>Password</Text>
@@ -419,7 +357,7 @@ const OnboardingScreen: React.FC = () => {
           <Ionicons name="lock-closed-outline" size={20} color={COLORS.textSecondary} style={styles.inputIcon} />
           <TextInput
             style={styles.input}
-            placeholder={isSigningUp ? "Create a password" : "Enter your password"}
+            placeholder="Create a password"
             placeholderTextColor={COLORS.textSecondary}
             value={password}
             onChangeText={setPassword}
@@ -438,27 +376,24 @@ const OnboardingScreen: React.FC = () => {
         </View>
       </View>
       
-      {isSigningUp && (
-        <View style={styles.inputContainer}>
-          <Text style={styles.inputLabel}>Confirm Password</Text>
-          <View style={styles.inputWrapper}>
-            <Ionicons name="lock-closed-outline" size={20} color={COLORS.textSecondary} style={styles.inputIcon} />
-            <TextInput
-              style={styles.input}
-              placeholder="Confirm your password"
-              placeholderTextColor={COLORS.textSecondary}
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-              secureTextEntry={!passwordVisible}
-            />
-          </View>
+      <View style={styles.inputContainer}>
+        <Text style={styles.inputLabel}>Confirm Password</Text>
+        <View style={styles.inputWrapper}>
+          <Ionicons name="lock-closed-outline" size={20} color={COLORS.textSecondary} style={styles.inputIcon} />
+          <TextInput
+            style={styles.input}
+            placeholder="Confirm your password"
+            placeholderTextColor={COLORS.textSecondary}
+            value={confirmPassword}
+            onChangeText={setConfirmPassword}
+            secureTextEntry={!passwordVisible}
+          />
         </View>
-      )}
+      </View>
       
       <Button
         title="Continue"
         onPress={handlePasswordContinue}
-        loading={isLoading && !isSigningUp}
         style={styles.continueButton}
       />
     </View>
@@ -485,7 +420,7 @@ const OnboardingScreen: React.FC = () => {
       </View>
       
       <Button
-        title="Complete Registration"
+        title="Continue"
         onPress={handleNameContinue}
         loading={isLoading}
         style={styles.continueButton}
@@ -493,25 +428,7 @@ const OnboardingScreen: React.FC = () => {
     </View>
   );
   
-  const renderSuccessStep = () => (
-    <View style={styles.stepContainer}>
-      <View style={styles.successIconContainer}>
-        <Ionicons name="checkmark-circle" size={100} color={COLORS.primary} />
-      </View>
-      
-      <Text style={styles.stepTitle}>Registration Successful!</Text>
-      <Text style={styles.stepSubtitle}>Your account has been created</Text>
-      
-      <Button
-        title="Continue"
-        onPress={handleSuccessContinue}
-        style={styles.continueButton}
-      />
-    </View>
-  );
-  
-  
-  const renderBiometricsStep = () => (
+  const renderBiometricSetupStep = () => (
     <View style={styles.stepContainer}>
       <View style={styles.biometricIconContainer}>
         <Ionicons name={getBiometricIcon()} size={80} color={COLORS.primary} />
@@ -524,14 +441,14 @@ const OnboardingScreen: React.FC = () => {
       
       <Button
         title={`Enable ${biometricTypeName}`}
-        onPress={handleEnableBiometrics}
+        onPress={handleBiometricSetup}
         loading={isLoading}
         style={styles.continueButton}
       />
       
       <Button
         title="Skip for now"
-        onPress={handleSkipBiometrics}
+        onPress={() => animateToNextStep(OnboardingStep.PASSCODE_SETUP)}
         variant="outline"
         style={styles.skipButton}
       />
@@ -542,13 +459,57 @@ const OnboardingScreen: React.FC = () => {
     </View>
   );
   
-  const renderCurrentStep = () => {
+  const renderPasscodeSetupStep = () => (
+    <View style={styles.stepContainer}>
+      <View style={styles.biometricIconContainer}>
+        <Ionicons name="lock-closed" size={80} color={COLORS.primary} />
+      </View>
+      
+      <Text style={styles.stepTitle}>Set Up Passcode</Text>
+      <Text style={styles.stepSubtitle}>
+        Create a secure passcode for accessing your account
+      </Text>
+      
+      <Button
+        title="Set Up Passcode"
+        onPress={() => animateToNextStep(OnboardingStep.SUCCESS)}
+        style={styles.continueButton}
+      />
+      
+      <Button
+        title="Skip for now"
+        onPress={() => animateToNextStep(OnboardingStep.SUCCESS)}
+        variant="outline"
+        style={styles.skipButton}
+      />
+      
+      <Text style={styles.biometricNote}>
+        You can set up a passcode later in your profile settings
+      </Text>
+    </View>
+  );
+  
+  const renderSuccessStep = () => (
+    <View style={styles.stepContainer}>
+      <View style={styles.successIconContainer}>
+        <Ionicons name="checkmark-circle" size={100} color={COLORS.primary} />
+      </View>
+      
+      <Text style={styles.stepTitle}>Ready to Complete</Text>
+      <Text style={styles.stepSubtitle}>Let's create your account</Text>
+      
+      <Button
+        title="Complete Registration"
+        onPress={handleSuccess}
+        loading={isLoading}
+        style={styles.continueButton}
+      />
+    </View>
+  );
+  
+  const renderStep = () => {
     switch (currentStep) {
       case OnboardingStep.WELCOME:
-        return renderWelcomeStep();
-      case OnboardingStep.LOGIN:
-        // This step should never be shown now as we redirect in useEffect
-        // but providing fallback to welcome step
         return renderWelcomeStep();
       case OnboardingStep.EMAIL:
         return renderEmailStep();
@@ -556,42 +517,30 @@ const OnboardingScreen: React.FC = () => {
         return renderPasswordStep();
       case OnboardingStep.NAME:
         return renderNameStep();
+      case OnboardingStep.BIOMETRIC_SETUP:
+        return renderBiometricSetupStep();
+      case OnboardingStep.PASSCODE_SETUP:
+        return renderPasscodeSetupStep();
       case OnboardingStep.SUCCESS:
         return renderSuccessStep();
-      case OnboardingStep.BIOMETRICS:
-        return renderBiometricsStep();
       default:
         return renderWelcomeStep();
     }
   };
   
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView 
-        style={styles.keyboardAvoidingView}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.keyboardAvoidView}
       >
         <ScrollView 
-          contentContainerStyle={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
         >
-          <View style={styles.container}>
-            {renderBackButton()}
-            
-            <View style={styles.logoContainer}>
-              <Text style={styles.logo}>Ryt</Text>
-              <Text style={styles.logoSubtitle}>Bank</Text>
-            </View>
-            
-            <Animated.View 
-              style={[
-                styles.stepWrapper,
-                { transform: [{ translateX: slideAnim }] }
-              ]}
-            >
-              {renderCurrentStep()}
-            </Animated.View>
-          </View>
+          {renderProgressBar()}
+          {renderBackButton()}
+          {renderStep()}
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -599,68 +548,112 @@ const OnboardingScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  keyboardAvoidingView: {
-    flex: 1,
-  },
-  scrollView: {
-    flexGrow: 1,
-  },
   container: {
     flex: 1,
     padding: SIZES.padding,
     paddingTop: 40,
   },
-  logoContainer: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    marginBottom: 40,
-    alignSelf: 'center',
+  keyboardAvoidView: {
+    flex: 1,
   },
-  logo: {
-    fontSize: 42,
+  scrollContent: {
+    flexGrow: 1,
+  },
+  progressContainer: {
+    width: '100%',
+    paddingHorizontal: 16,
+    marginBottom: 24,
+  },
+  progressBar: {
+    height: 4,
+    backgroundColor: COLORS.border,
+    borderRadius: 2,
+    marginBottom: 8,
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: COLORS.primary,
+    borderRadius: 2,
+  },
+  progressText: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    textAlign: 'right',
+  },
+  logoContainer: {
+    alignItems: 'center',
+    marginBottom: 40,
+  },
+  logoCircle: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: COLORS.primary + '15',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  appName: {
+    fontSize: 32,
     fontWeight: 'bold',
-    color: COLORS.primary,
+    color: COLORS.text,
     letterSpacing: 1,
   },
-  logoSubtitle: {
-    fontSize: 28,
-    fontWeight: '500',
-    color: COLORS.text,
-    marginLeft: 4,
-  },
-  stepWrapper: {
+  welcomeContent: {
     width: '100%',
-    flex: 1,
+    alignItems: 'center',
+    marginBottom: 40,
+  },
+  welcomeText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: COLORS.text,
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  descriptionText: {
+    fontSize: 16,
+    color: COLORS.textSecondary,
+    marginBottom: 32,
+    textAlign: 'center',
+    lineHeight: 24,
+  },
+  featuresContainer: {
+    width: '100%',
+    gap: 16,
+  },
+  featureItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: COLORS.card,
+    borderRadius: SIZES.radius,
+    gap: 12,
+  },
+  featureText: {
+    fontSize: 16,
+    color: COLORS.text,
+    fontWeight: '500',
+  },
+  buttonsContainer: {
+    width: '100%',
+    gap: 16,
+  },
+  primaryButton: {
+    width: '100%',
+  },
+  secondaryButton: {
+    width: '100%',
   },
   stepContainer: {
     width: '100%',
     alignItems: 'center',
     paddingHorizontal: 16,
   },
-  welcomeImageContainer: {
-    marginVertical: 40,
-    alignItems: 'center',
-  },
-  welcomeTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: COLORS.text,
-    marginBottom: 12,
-    textAlign: 'center',
-  },
-  welcomeSubtitle: {
-    fontSize: 16,
-    color: COLORS.textSecondary,
-    marginBottom: 40,
-    textAlign: 'center',
-  },
-  welcomeButton: {
-    marginBottom: 16,
+  stepContent: {
     width: '100%',
+    alignItems: 'center',
+    paddingHorizontal: 16,
   },
   stepTitle: {
     fontSize: 24,
@@ -721,17 +714,6 @@ const styles = StyleSheet.create({
     zIndex: 10,
     padding: 10,
   },
-  switchOption: {
-    marginTop: 24,
-  },
-  switchOptionText: {
-    fontSize: 14,
-    color: COLORS.textSecondary,
-  },
-  switchOptionHighlight: {
-    color: COLORS.primary,
-    fontWeight: 'bold',
-  },
   successIconContainer: {
     marginVertical: 40,
     alignItems: 'center',
@@ -744,18 +726,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginVertical: 30,
-  },
-  biometricButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 16,
-    marginTop: 12,
-  },
-  biometricText: {
-    color: COLORS.primary,
-    marginLeft: 8,
-    fontWeight: '500',
   },
   biometricNote: {
     fontSize: 14,

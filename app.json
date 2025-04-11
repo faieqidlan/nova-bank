@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Ryt Bank",
+    "name": "Nova Bank",
     "slug": "nova-bank",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -17,7 +17,10 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.nova.app"
+      "bundleIdentifier": "com.nova.app",
+      "infoPlist": {
+        "NSFaceIDUsageDescription": "Allow Nova Bank to use Face ID for a secure and convenient login experience"
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -37,16 +40,16 @@
       [
         "expo-local-authentication",
         {
-          "faceIDPermission": "Allow Ryt Bank to use Face ID to log you in securely",
-          "nsUserTrackingPermission": "Allow Ryt Bank to use biometric authentication for secure login"
+          "faceIDPermission": "Allow Nova Bank to use Face ID for a secure and convenient login experience"
         }
       ],
       "expo-secure-store"
     ],
     "extra": {
       "eas": {
-        "projectId": "your-project-id"
+        "projectId": "96a3a0ca-3df4-410e-9074-ae33b53d49da"
       }
-    }
+    },
+    "owner": "faieqlano"
   }
 }

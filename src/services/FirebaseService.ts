@@ -55,12 +55,21 @@ export class FirebaseService {
     name: string
   ): Promise<{ user: User | null; error?: string }> {
     try {
+      console.log('Starting Firebase registration...');
       // Create user account
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const firebaseUser = userCredential.user;
+      console.log('Firebase user created:', firebaseUser.uid);
       
       // Create user profile document
       const user = await this.createUserProfile(firebaseUser, { name });
+      console.log('User profile created:', user.id);
+      
+      // Ensure user is signed in
+      if (auth.currentUser?.uid !== firebaseUser.uid) {
+        console.log('Signing in user after registration...');
+        await signInWithEmailAndPassword(auth, email, password);
+      }
       
       return { user };
     } catch (error: any) {

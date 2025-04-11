@@ -1,86 +1,115 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   View, 
   Text, 
   StyleSheet, 
   SafeAreaView, 
   Switch,
-  TouchableOpacity
+  TouchableOpacity,
+  Platform
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { COLORS, SIZES } from '../constants/theme';
 import { Ionicons } from '@expo/vector-icons';
 import Button from '../components/common/Button';
+import * as LocalAuthentication from 'expo-local-authentication';
 
 const WelcomeScreen: React.FC = () => {
   const { authStatus, authenticateWithBiometrics, biometricType } = useAuth();
   const [loading, setLoading] = useState(false);
   const [enableBiometrics, setEnableBiometrics] = useState(true);
+  const [availableAuthTypes, setAvailableAuthTypes] = useState<LocalAuthentication.AuthenticationType[]>([]);
   const navigation = useNavigation();
+
+  // Check available authentication types
+  useEffect(() => {
+    const checkAuthTypes = async () => {
+      try {
+        const hasHardware = await LocalAuthentication.hasHardwareAsync();
+        if (!hasHardware) return;
+        
+        const isEnrolled = await LocalAuthentication.isEnrolledAsync();
+        if (!isEnrolled) return;
+        
+        const types = await LocalAuthentication.supportedAuthenticationTypesAsync();
+        setAvailableAuthTypes(types);
+      } catch (err) {
+        console.error('Error checking auth types:', err);
+      }
+    };
+    
+    checkAuthTypes();
+  }, []);
 
   const handleContinue = async () => {
     setLoading(true);
     
     if (enableBiometrics) {
-      // Try to authenticate
-      await authenticateWithBiometrics();
+      // Try biometric authentication first
+      const success = await authenticateWithBiometrics();
+      if (!success) {
+        // If biometric auth fails, navigate to regular auth screen
+        navigation.navigate('Auth' as never);
+      }
     } else {
-      // Skip biometrics authentication and navigate to auth screen
-      // This would typically set some user preference in a real app
+      // Skip biometrics and go straight to auth screen
       navigation.navigate('Auth' as never);
-      setLoading(false);
     }
+    
+    setLoading(false);
   };
 
   const getBiometricLabel = () => {
-    switch (biometricType) {
-      case 'FaceID':
-        return 'Face ID';
-      case 'Fingerprint':
-        return 'Fingerprint';
-      default:
-        return 'Biometrics';
+    if (availableAuthTypes.includes(LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION)) {
+      return Platform.OS === 'ios' ? 'Face ID' : 'Face Recognition';
+    } else if (availableAuthTypes.includes(LocalAuthentication.AuthenticationType.FINGERPRINT)) {
+      return Platform.OS === 'ios' ? 'Touch ID' : 'Fingerprint';
+    } else if (availableAuthTypes.includes(LocalAuthentication.AuthenticationType.IRIS)) {
+      return 'Iris Scan';
     }
+    return 'Biometrics';
   };
 
   const getBiometricDescription = () => {
-    switch (biometricType) {
-      case 'FaceID':
-        return 'Use Face ID to log in quickly and securely.';
-      case 'Fingerprint':
-        return 'Use Fingerprint to log in quickly and securely.';
-      default:
-        return 'Use biometrics to log in quickly and securely.';
+    if (availableAuthTypes.includes(LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION)) {
+      return Platform.OS === 'ios' 
+        ? 'Use Face ID to log in quickly and securely.' 
+        : 'Use Face Recognition to log in quickly and securely.';
+    } else if (availableAuthTypes.includes(LocalAuthentication.AuthenticationType.FINGERPRINT)) {
+      return Platform.OS === 'ios'
+        ? 'Use Touch ID to log in quickly and securely.'
+        : 'Use Fingerprint to log in quickly and securely.';
     }
+    return 'Use biometrics to log in quickly and securely.';
   };
 
   const getBiometricIcon = () => {
-    switch (biometricType) {
-      case 'FaceID':
-        return 'scan-face';
-      case 'Fingerprint':
-        return 'finger-print';
-      default:
-        return 'lock-closed';
+    if (availableAuthTypes.includes(LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION)) {
+      return 'scan-outline';
+    } else if (availableAuthTypes.includes(LocalAuthentication.AuthenticationType.FINGERPRINT)) {
+      return 'finger-print';
+    } else if (availableAuthTypes.includes(LocalAuthentication.AuthenticationType.IRIS)) {
+      return 'eye-outline';
     }
+    return 'lock-closed';
   };
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
         <View style={styles.logoContainer}>
-          <Text style={styles.logo}>Ryt</Text>
+          <Text style={styles.logo}>Nova</Text>
           <Text style={styles.logoSubtitle}>Bank</Text>
         </View>
 
         <View style={styles.illustrationContainer}>
           <View style={styles.securityIconContainer}>
-            <Ionicons name={getBiometricIcon() as any} size={80} color={COLORS.primary} />
+            <Ionicons name={getBiometricIcon()} size={80} color={COLORS.primary} />
           </View>
         </View>
 
-        <Text style={styles.title}>Welcome to Ryt Bank!</Text>
+        <Text style={styles.title}>Welcome to Nova Bank!</Text>
         
         <Text style={styles.subtitle}>
           Secure banking at your fingertips with advanced biometric protection.
