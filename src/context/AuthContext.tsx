@@ -178,20 +178,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         console.log('Error checking Expo Go:', err);
       }
       
-      // For Expo Go with FaceID, show a helpful message
-      if (isExpoGo && biometricType === 'FaceID' && Platform.OS === 'ios') {
-        console.log('FaceID detected in Expo Go - will use passcode fallback');
-        // Still attempt authentication but with an explicit warning
-        Alert.alert(
-          'FaceID Limitation',
-          'FaceID is not fully supported in Expo Go. The app will use passcode fallback instead.',
-          [{ text: 'Continue' }]
-        );
-      }
-      
       // First try a direct authentication approach with passcode fallback
       const authResult = await LocalAuthentication.authenticateAsync({
-        promptMessage: "Authenticate to continue",
+        promptMessage: "Sign in to your account",
         fallbackLabel: "Use Device Passcode",
         disableDeviceFallback: false // Enable passcode fallback
       });
@@ -223,14 +212,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
       } else {
         console.log('Biometric authentication failed:', authResult.error);
-        
-        // Handle FaceID warning specifically
-        if (authResult.warning && authResult.warning.includes("FaceID is available but has not been configured")) {
-          setError('FaceID is not available in Expo Go. Please build a development client or use passcode/TouchID.');
-        } else {
-          setError(authResult.error || 'Authentication failed');
-        }
-        
+        setError(authResult.error || 'Authentication failed');
         setAuthStatus('unauthenticated');
         setIsLoading(false);
         return false;
@@ -395,18 +377,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (result.success) {
         setIsDataRevealed(true);
         return true;
-      } else {
-        // If authentication fails but with a FaceID warning, show a helpful message
-        if (result.warning && result.warning.includes("FaceID is available but has not been configured")) {
-          console.log('FaceID not available in Expo Go when revealing data');
-          Alert.alert(
-            'FaceID Not Available',
-            'FaceID is not supported in Expo Go. Please use passcode instead or build a development client.',
-            [{ text: 'OK' }]
-          );
-        }
-        return false;
       }
+      return false;
     } catch (error) {
       console.error('Authentication error:', error);
       return false;

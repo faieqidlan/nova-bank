@@ -12,7 +12,7 @@ import {
 import { RouteProp, useRoute, useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { RootStackParamList } from '../navigation/types';
-import { Transaction } from '../types';
+import { Transaction } from '../types/transaction';
 import { getTransactionById } from '../services/mockData';
 import { COLORS, SIZES, SHADOWS } from '../constants/theme';
 import { useAuth } from '../context/AuthContext';
@@ -106,23 +106,23 @@ const TransactionDetailScreen: React.FC = () => {
     );
   }
 
-  const formatDate = (date: Date) => {
-    return new Date(date).toLocaleDateString('en-US', {
+  const formatDate = (timestamp: number) => {
+    return new Date(timestamp).toLocaleDateString('en-US', {
       day: 'numeric',
       month: 'long',
       year: 'numeric',
     });
   };
 
-  const formatTime = (date: Date) => {
-    return new Date(date).toLocaleTimeString('en-US', {
+  const formatTime = (timestamp: number) => {
+    return new Date(timestamp).toLocaleTimeString('en-US', {
       hour: '2-digit',
       minute: '2-digit',
     });
   };
 
-  const formatFullDateTime = (date: Date) => {
-    return `${formatDate(date)} at ${formatTime(date)}`;
+  const formatFullDateTime = (timestamp: number) => {
+    return `${formatDate(timestamp)} at ${formatTime(timestamp)}`;
   };
 
   return (

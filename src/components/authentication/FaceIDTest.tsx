@@ -90,20 +90,9 @@ const FaceIDTest: React.FC = () => {
         setAuthMode(AuthModeEnum.Authenticate);
         Alert.alert('Success', 'Authentication successful!');
       } else {
-        // Handle FaceID not available in Expo Go specifically
-        if (auth.warning && auth.warning.includes("FaceID is available but has not been configured")) {
-          console.log('FaceID not available in Expo Go, using passcode fallback');
-          setAuthMode(AuthModeEnum.Password);
-          Alert.alert(
-            'FaceID Not Available',
-            'FaceID is not supported in Expo Go. Please use passcode instead or build a development client.',
-            [{ text: 'OK' }]
-          );
-        } else {
-          console.log('Authentication failed, error:', auth.error);
-          setAuthMode(AuthModeEnum.Password);
-          Alert.alert('Failed', 'Authentication failed: ' + (auth.error || 'Unknown error'));
-        }
+        console.log('Authentication failed, error:', auth.error);
+        setAuthMode(AuthModeEnum.Password);
+        Alert.alert('Failed', 'Authentication failed: ' + (auth.error || 'Unknown error'));
       }
     } catch (error) {
       console.error('Authentication error:', error);
@@ -116,11 +105,6 @@ const FaceIDTest: React.FC = () => {
       {authMode === AuthModeEnum.Local && (
         <>
           <Text style={styles.title}>Biometric Authentication Test</Text>
-          {isExpoGo && (
-            <Text style={styles.warning}>
-              Note: FaceID is not supported in Expo Go. Use passcode instead or TouchID if available.
-            </Text>
-          )}
           <Text style={styles.description}>Test biometric authentication with fallback to passcode</Text>
           {authResult && (
             <View style={styles.resultContainer}>

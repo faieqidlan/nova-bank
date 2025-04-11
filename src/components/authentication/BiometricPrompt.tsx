@@ -18,12 +18,14 @@ interface BiometricPromptProps {
   onSuccess?: () => void;
   onCancel?: () => void;
   promptMessage?: string;
+  autoStart?: boolean;
 }
 
 const BiometricPrompt: React.FC<BiometricPromptProps> = ({ 
   onSuccess,
   onCancel,
-  promptMessage = "Authenticate to continue"
+  promptMessage = "Authenticate to continue",
+  autoStart = true
 }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [isExpoGo, setIsExpoGo] = useState(false);
@@ -44,9 +46,11 @@ const BiometricPrompt: React.FC<BiometricPromptProps> = ({
     
     checkExpoGo();
     
-    // Start authentication immediately when component mounts
-    handleAuthenticate();
-  }, []);
+    // Start authentication immediately when component mounts if autoStart is true
+    if (autoStart) {
+      handleAuthenticate();
+    }
+  }, [autoStart]);
 
   const getBiometricIcon = () => {
     switch (biometricType) {
@@ -101,119 +105,91 @@ const BiometricPrompt: React.FC<BiometricPromptProps> = ({
   };
 
   return (
-    <Card style={styles.card}>
-      <View style={styles.container}>
+    <View style={styles.container}>
+      <Card style={styles.card}>
         <View style={styles.iconContainer}>
-          <Ionicons name={getBiometricIcon()} size={32} color={COLORS.primary} />
+          <Ionicons name={getBiometricIcon()} size={60} color={COLORS.primary} />
         </View>
         
         <Text style={styles.title}>
-          {isExpoGo && biometricType === 'FaceID' 
-            ? 'Authenticate with Passcode' 
-            : `Authenticate with ${biometricTypeName} or Passcode`}
+          {biometricTypeName} Authentication
         </Text>
         
-        {isExpoGo && biometricType === 'FaceID' && (
-          <Text style={styles.warning}>
-            Note: FaceID is not supported in Expo Go. Please use passcode instead.
-          </Text>
+        <Text style={styles.description}>
+          {isExpoGo 
+            ? "FaceID is not available in Expo Go. Please use a development build for full biometric functionality."
+            : `Use your ${biometricTypeName} to authenticate`}
+        </Text>
+        
+        {!autoStart && (
+          <TouchableOpacity 
+            style={styles.button}
+            onPress={handleAuthenticate}
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <ActivityIndicator color={COLORS.background} />
+            ) : (
+              <Text style={styles.buttonText}>Authenticate</Text>
+            )}
+          </TouchableOpacity>
         )}
         
-        <Text style={styles.message}>
-          {promptMessage}
-        </Text>
-        
-        {isLoading ? (
-          <ActivityIndicator size="large" color={COLORS.primary} style={styles.loader} />
-        ) : (
-          <View style={styles.buttonContainer}>
-            <TouchableOpacity 
-              style={styles.button} 
-              onPress={handleAuthenticate}
-            >
-              <Text style={styles.buttonText}>Authenticate</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={styles.cancelButton} 
-              onPress={handleCancel}
-            >
-              <Text style={styles.cancelText}>Cancel</Text>
-            </TouchableOpacity>
+        {isLoading && (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={COLORS.primary} />
+            <Text style={styles.loadingText}>Authenticating...</Text>
           </View>
         )}
-      </View>
-    </Card>
+      </Card>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  card: {
-    padding: 0,
-    overflow: 'hidden',
-  },
   container: {
-    alignItems: 'center',
+    width: '100%',
+    padding: SIZES.padding,
+  },
+  card: {
     padding: SIZES.padding * 2,
+    alignItems: 'center',
   },
   iconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: COLORS.primary + '15',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: SIZES.padding * 2,
   },
   title: {
-    fontSize: 20,
-    fontWeight: '600',
+    fontSize: SIZES.large,
+    fontWeight: 'bold',
     color: COLORS.text,
-    marginBottom: 10,
+    marginBottom: SIZES.padding,
     textAlign: 'center',
   },
-  message: {
-    fontSize: 16,
+  description: {
+    fontSize: SIZES.medium,
     color: COLORS.textSecondary,
-    marginBottom: 30,
     textAlign: 'center',
-  },
-  warning: {
-    fontSize: 14,
-    color: COLORS.danger,
-    textAlign: 'center',
-    marginBottom: 10,
-    padding: 8,
-    backgroundColor: '#FFF5F5',
-    borderRadius: 8,
-    maxWidth: '100%',
-  },
-  buttonContainer: {
-    width: '100%',
-    marginTop: 10,
+    marginBottom: SIZES.padding * 2,
   },
   button: {
     backgroundColor: COLORS.primary,
+    padding: SIZES.padding,
     borderRadius: SIZES.radius,
-    padding: 16,
+    width: '100%',
     alignItems: 'center',
-    marginBottom: 12,
   },
   buttonText: {
-    color: '#FFF',
-    fontWeight: '600',
-    fontSize: 16,
+    color: '#FFFFFF',
+    fontSize: SIZES.medium,
+    fontWeight: 'bold',
   },
-  cancelButton: {
-    padding: 12,
+  loadingContainer: {
+    marginTop: SIZES.padding,
     alignItems: 'center',
   },
-  cancelText: {
+  loadingText: {
+    marginTop: SIZES.padding,
     color: COLORS.textSecondary,
-    fontSize: 16,
-  },
-  loader: {
-    marginVertical: 20,
   },
 });
 

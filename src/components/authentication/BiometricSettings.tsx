@@ -86,14 +86,7 @@ const BiometricSettings: React.FC<BiometricSettingsProps> = ({ onUpdate }) => {
           }
         } else {
           console.log('Authentication failed:', authResult.error);
-          // If in Expo Go and we get FaceID warning, show a helpful message
-          if (authResult.warning && authResult.warning.includes("FaceID is available but has not been configured")) {
-            Alert.alert(
-              'FaceID Not Available',
-              'FaceID is not supported in Expo Go. Please use passcode for authentication or build a development client.',
-              [{ text: 'OK' }]
-            );
-          }
+          Alert.alert('Error', 'Authentication failed: ' + (authResult.error || 'Unknown error'));
         }
       } catch (error) {
         console.error('Error enabling biometrics:', error);
@@ -199,11 +192,6 @@ const BiometricSettings: React.FC<BiometricSettingsProps> = ({ onUpdate }) => {
                 ? `${biometricTypeName} login is enabled for quick and secure access`
                 : `Enable ${biometricTypeName} login for quick and secure access`}
             </Text>
-            {isExpoGo && biometricType === 'FaceID' && (
-              <Text style={styles.warning}>
-                Note: FaceID is not supported in Expo Go. Authentication will use passcode.
-              </Text>
-            )}
           </View>
           <Switch
             value={isEnabled}

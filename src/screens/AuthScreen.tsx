@@ -61,15 +61,6 @@ const AuthScreen: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    // Auto-trigger biometric authentication when component mounts 
-    // if biometrics are supported and the flag is true (previously logged in)
-    if (isBiometricSupported && showBiometricPrompt) {
-      console.log('Auto-triggering biometric authentication on AuthScreen mount');
-      handleBiometricAuthentication();
-    }
-  }, [isBiometricSupported, showBiometricPrompt]);
-
-  useEffect(() => {
     if (error) {
       // Auto-clear error after 5 seconds instead of showing an alert
       const timer = setTimeout(() => {

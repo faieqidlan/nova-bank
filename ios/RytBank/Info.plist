@@ -44,12 +44,12 @@
       <key>NSAllowsLocalNetworking</key>
       <true/>
     </dict>
-    <key>NSFaceIDUsageDescription</key>
-    <string>We need to use Face ID to securely authenticate you</string>
-    <key>NSCameraUsageDescription</key>
-    <string>We need camera access for Face ID authentication</string>
     <key>NSBiometricUsageDescription</key>
     <string>Allows using biometrics to authenticate securely</string>
+    <key>NSCameraUsageDescription</key>
+    <string>We need camera access for Face ID authentication</string>
+    <key>NSFaceIDUsageDescription</key>
+    <string>Allow Nova Bank to use Face ID for a secure and convenient login experience</string>
     <key>UILaunchStoryboardName</key>
     <string>SplashScreen</string>
     <key>UIRequiredDeviceCapabilities</key>

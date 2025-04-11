@@ -12,7 +12,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
-import { Transaction } from '../types';
+import { Transaction } from '../types/transaction';
 import { getTransactions } from '../services/mockData';
 import { COLORS, SIZES } from '../constants/theme';
 import { useAuth } from '../context/AuthContext';

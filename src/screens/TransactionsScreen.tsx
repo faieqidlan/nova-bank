@@ -11,7 +11,7 @@ import {
   SectionList
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Transaction } from '../types';
+import { Transaction } from '../types/transaction';
 import { getTransactions } from '../services/mockData';
 import { COLORS, SIZES } from '../constants/theme';
 import { useAuth } from '../context/AuthContext';

@@ -284,7 +284,7 @@ export class BiometricsService {
       console.log(`Simple biometric prompt: ${promptMessage}`);
       
       const result = await LocalAuthentication.authenticateAsync({
-        promptMessage: promptMessage || 'Authenticate to continue',
+        promptMessage: promptMessage || 'Sign in to your account',
         disableDeviceFallback: false,
       });
       
@@ -609,21 +609,6 @@ export class BiometricsService {
         };
       }
       
-      // Prompt user for biometric authentication before storing credentials
-      console.log('Prompting for biometric authentication to store credentials');
-      const authResult = await LocalAuthentication.authenticateAsync({
-        promptMessage: 'Authenticate to secure your credentials',
-        disableDeviceFallback: false,
-      });
-      
-      if (!authResult.success) {
-        console.log('Biometric authentication failed or was cancelled when storing credentials');
-        return { 
-          success: false, 
-          error: 'Biometric authentication failed' 
-        };
-      }
-      
       // Make sure keys exist or create them
       const { keysExist } = await this.biometricKeysExist();
       if (!keysExist) {
@@ -764,11 +749,28 @@ export class BiometricsService {
   static async deleteCredentials(): Promise<{ success: boolean }> {
     try {
       await SecureStore.deleteItemAsync(this.CREDENTIALS_STORAGE_KEY);
-      console.log('Credentials deleted successfully');
       return { success: true };
     } catch (error) {
       console.error('Error deleting credentials:', error);
       return { success: false };
+    }
+  }
+
+  /**
+   * Get stored credentials without requiring biometric authentication
+   * This should only be used after biometric authentication has already been performed
+   * @returns Stored credentials if they exist
+   */
+  static async getStoredCredentials(): Promise<{ email: string; password: string } | null> {
+    try {
+      const storedCredentials = await SecureStore.getItemAsync(this.CREDENTIALS_STORAGE_KEY);
+      if (!storedCredentials) {
+        return null;
+      }
+      return JSON.parse(storedCredentials);
+    } catch (error) {
+      console.error('Error getting stored credentials:', error);
+      return null;
     }
   }
 } 

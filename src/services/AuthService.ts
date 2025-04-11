@@ -201,43 +201,27 @@ export class AuthService {
         };
       }
       
-      // Get the biometric type name for the prompt
-      const effectiveBiometryType = Platform.OS === 'ios' && !biometryType 
-        ? 'FaceID' 
-        : biometryType;
+      // Get stored credentials without requiring another biometric prompt
+      const storedCredentials = await BiometricsService.getStoredCredentials();
       
-      const biometricName = BiometricsService.getBiometricTypeText(effectiveBiometryType);
-      
-      // Retrieve stored credentials with biometric authentication
-      const credentialsResult = await BiometricsService.getCredentials(
-        `Sign in with ${biometricName}`
-      );
-      
-      if (!credentialsResult.success || !credentialsResult.credentials) {
-        console.log('Failed to retrieve stored credentials:', credentialsResult.error);
-        
-        // Check if user data exists as a fallback
-        const userData = await AsyncStorage.getItem('user_data');
-        if (userData) {
-          console.log('Found user data in AsyncStorage, but no biometric credentials');
-        }
-        
+      if (!storedCredentials) {
+        console.log('No stored credentials found');
         return {
           user: null,
-          error: credentialsResult.error || 'Could not retrieve stored credentials',
+          error: 'No stored credentials found. Please login with email and password first.',
         };
       }
       
-      // Login with retrieved credentials
-      const { email, password } = credentialsResult.credentials;
-      console.log(`Attempting login with retrieved credentials for ${email}`);
+      // Login with stored credentials
+      const { email, password } = storedCredentials;
+      console.log(`Attempting login with stored credentials for ${email}`);
       
       const { user, error } = await this.login(email, password);
       
       if (user) {
         console.log('Successfully authenticated using biometrics');
       } else {
-        console.log('Failed to authenticate with retrieved credentials:', error);
+        console.log('Failed to authenticate with stored credentials:', error);
       }
       
       return { user, error };
