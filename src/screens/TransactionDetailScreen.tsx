@@ -59,9 +59,9 @@ const TransactionDetailScreen: React.FC = () => {
           <View style={styles.headerRight}>
             <TouchableOpacity onPress={toggleDataVisibility} style={styles.iconButton}>
               <Ionicons 
-                name="eye-outline" 
+                name={isDataRevealed ? "eye" : "eye-off"} 
                 size={24} 
-                color={COLORS.text} 
+                color={isDataRevealed ? COLORS.primary : COLORS.text} 
               />
             </TouchableOpacity>
             <TouchableOpacity style={styles.iconButton}>
@@ -86,9 +86,9 @@ const TransactionDetailScreen: React.FC = () => {
           <View style={styles.headerRight}>
             <TouchableOpacity onPress={toggleDataVisibility} style={styles.iconButton}>
               <Ionicons 
-                name="eye-outline" 
+                name={isDataRevealed ? "eye" : "eye-off"} 
                 size={24} 
-                color={COLORS.text} 
+                color={isDataRevealed ? COLORS.primary : COLORS.text} 
               />
             </TouchableOpacity>
             <TouchableOpacity style={styles.iconButton}>
@@ -140,9 +140,9 @@ const TransactionDetailScreen: React.FC = () => {
           <View style={styles.headerRight}>
             <TouchableOpacity onPress={toggleDataVisibility} style={styles.iconButton}>
               <Ionicons 
-                name="eye-outline" 
+                name={isDataRevealed ? "eye" : "eye-off"} 
                 size={24} 
-                color={COLORS.text} 
+                color={isDataRevealed ? COLORS.primary : COLORS.text} 
               />
             </TouchableOpacity>
             <TouchableOpacity style={styles.iconButton}>
@@ -156,7 +156,7 @@ const TransactionDetailScreen: React.FC = () => {
           <View style={styles.amountContainer}>
             {isDataRevealed ? (
               <Text style={styles.amount}>
-                {transaction.type === 'credit' ? '+' : ''}RM{transaction.amount.toFixed(2)}
+                {transaction.type === 'credit' ? '+' : '-'}RM{transaction.amount.toFixed(2)}
               </Text>
             ) : (
               <Text style={styles.amount}>••••••</Text>

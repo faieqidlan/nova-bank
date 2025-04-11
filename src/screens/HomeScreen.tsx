@@ -120,7 +120,7 @@ const HomeScreen: React.FC = () => {
               styles.transactionAmount,
               transaction.type === 'credit' ? styles.creditAmount : styles.debitAmount
             ]}>
-              {transaction.type === 'credit' ? '+ ' : ''}RM{transaction.amount}
+              {transaction.type === 'credit' ? '+' : '-'}RM{transaction.amount}
             </Text>
           ) : (
             <Text style={styles.transactionAmount}>•••••</Text>

@@ -232,7 +232,8 @@ const TransactionsScreen: React.FC = () => {
               styles.transactionAmount,
               item.type === 'credit' ? styles.creditAmount : styles.debitAmount
             ]}>
-              {item.type === 'credit' ? '+ ' : ''}RM{item.amount}
+              {item.type === 'credit' ? '+RM' : '-RM'}
+              {item.amount.toFixed(2)}
             </Text>
           ) : (
             <Text style={styles.transactionAmount}>•••••</Text>
