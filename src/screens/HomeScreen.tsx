@@ -17,54 +17,17 @@ import { getTransactions } from '../services/mockData';
 import { COLORS, SIZES } from '../constants/theme';
 import { useAuth } from '../context/AuthContext';
 import { useNavigation } from '../navigation/navigationHooks';
-import { BiometricsService } from '../services/BiometricsService';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const HomeScreen: React.FC = () => {
   const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [showBiometricPrompt, setShowBiometricPrompt] = useState(false);
-  const { user, isDataRevealed, toggleDataVisibility, isBiometricSupported } = useAuth();
+  const { user, isDataRevealed, toggleDataVisibility } = useAuth();
   const navigation = useNavigation();
 
   useEffect(() => {
     loadData();
-    checkBiometricEnrollment();
   }, []);
-
-  const checkBiometricEnrollment = async () => {
-    try {
-      // Check if biometrics is available
-      if (!isBiometricSupported) {
-        return;
-      }
-      
-      // Check if we've already shown the prompt before
-      const hasPromptedBiometrics = await AsyncStorage.getItem('hasPromptedBiometrics');
-      if (hasPromptedBiometrics === 'true') {
-        return;
-      }
-      
-      // Check if keys already exist
-      const { keysExist } = await BiometricsService.biometricKeysExist();
-      if (!keysExist) {
-        // Show the prompt after a short delay to ensure the screen is loaded
-        setTimeout(() => {
-          setShowBiometricPrompt(true);
-        }, 1000);
-      }
-      
-      // Mark that we've shown the prompt
-      await AsyncStorage.setItem('hasPromptedBiometrics', 'true');
-    } catch (error) {
-      console.error('Error checking biometric enrollment:', error);
-    }
-  };
-
-  const handleCloseBiometricPrompt = () => {
-    setShowBiometricPrompt(false);
-  };
 
   const loadData = async () => {
     try {
@@ -157,7 +120,7 @@ const HomeScreen: React.FC = () => {
               styles.transactionAmount,
               transaction.type === 'credit' ? styles.creditAmount : styles.debitAmount
             ]}>
-              {transaction.type === 'credit' ? '+ ' : ''}{transaction.amount} MYR
+              {transaction.type === 'credit' ? '+ ' : ''}RM{transaction.amount}
             </Text>
           ) : (
             <Text style={styles.transactionAmount}>•••••</Text>
@@ -190,7 +153,7 @@ const HomeScreen: React.FC = () => {
         {/* Balance Card */}
         <Card style={styles.balanceCard} shadowType="medium">
           <View style={styles.balanceHeader}>
-            <Text style={styles.balanceTitle}>Account Balance</Text>
+            <Text style={styles.balanceTitle}>Total Balance</Text>
             <TouchableOpacity onPress={toggleDataVisibility}>
               <Ionicons 
                 name={isDataRevealed ? "eye" : "eye-off"} 
@@ -258,7 +221,6 @@ const HomeScreen: React.FC = () => {
             </View>
           )}
         </Card>
-
       </ScrollView>
     </SafeAreaView>
   );
@@ -339,7 +301,7 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     flex: 1,
-    marginHorizontal: 4,
+    marginHorizontal: 2,
     borderRadius: 16,
     paddingVertical: 10,
   },

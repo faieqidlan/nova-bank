@@ -65,7 +65,7 @@ const AuthScreen: React.FC = () => {
     // if biometrics are supported and the flag is true (previously logged in)
     if (isBiometricSupported && showBiometricPrompt) {
       console.log('Auto-triggering biometric authentication on AuthScreen mount');
-      handleAuthenticate();
+      handleBiometricAuthentication();
     }
   }, [isBiometricSupported, showBiometricPrompt]);
 
@@ -79,32 +79,6 @@ const AuthScreen: React.FC = () => {
       return () => clearTimeout(timer);
     }
   }, [error, clearError]);
-
-  const handleAuthenticate = async () => {
-    if (!isBiometricSupported) {
-      Alert.alert(
-        'Biometric Authentication Not Available',
-        'Your device does not support biometric authentication or no biometrics are enrolled.',
-        [{ text: 'OK', onPress: () => handleLoginWithPassword() }]
-      );
-      return;
-    }
-
-    setIsAuthenticating(true);
-    try {
-      // Use recommendedAuthenticationTypes if available in your Expo SDK version
-      await authenticateWithBiometrics();
-    } catch (err) {
-      console.error('Authentication error:', err);
-      Alert.alert(
-        'Authentication Failed',
-        'Please try again or use password login.',
-        [{ text: 'OK' }]
-      );
-    } finally {
-      setIsAuthenticating(false);
-    }
-  };
 
   const handleLoginWithPassword = () => {
     navigation.navigate('Login');

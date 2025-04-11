@@ -232,7 +232,7 @@ const TransactionsScreen: React.FC = () => {
               styles.transactionAmount,
               item.type === 'credit' ? styles.creditAmount : styles.debitAmount
             ]}>
-              {item.type === 'credit' ? '+ ' : ''}{item.amount} MYR
+              {item.type === 'credit' ? '+ ' : ''}RM{item.amount}
             </Text>
           ) : (
             <Text style={styles.transactionAmount}>•••••</Text>
