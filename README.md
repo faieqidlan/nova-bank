@@ -1,4 +1,57 @@
-# Bank Test App
+# Nova Bank App
+
+## For Evaluators
+
+This is a React Native mobile application built with Expo and TypeScript, implementing a secure banking application with the following key features:
+
+- User authentication with Firebase
+- Biometric authentication for secure access
+- Secure storage of sensitive data
+- Secure account management
+
+### Quickest Way to Evaluate
+
+1. Install Expo Go on your mobile device:
+   - [Android Play Store](https://play.google.com/store/apps/details?id=host.exp.exponent)
+   - [iOS App Store](https://apps.apple.com/us/app/expo-go/id982107779)
+
+2. Clone and set up the project:
+```bash
+git clone [https://github.com/faieqidlan/nova-bank]
+cd nova-app
+yarn install  # or npm install
+cp .env.example .env
+```
+
+3. Add the following environment variables to the `.env` file:
+   The app requires Firebase configuration. Please contact the developer to receive the necessary environment variables.
+   The `.env` file should contain the following variables:
+   ```
+   FIREBASE_API_KEY=your_api_key
+   FIREBASE_AUTH_DOMAIN=your_project_id.firebaseapp.com
+   FIREBASE_PROJECT_ID=your_project_id
+   FIREBASE_STORAGE_BUCKET=your_project_id.appspot.com
+   FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+   FIREBASE_APP_ID=your_app_id
+   ```
+
+4. Start the development server:
+```bash
+npx expo start
+```
+
+5. Scan the QR code with your mobile device's Expo Go app
+
+### Project Structure
+
+```
+src/
+├── components/     # Reusable UI components
+├── screens/        # Screen components
+├── services/      # Business logic and API services
+├── navigation/    # Navigation configuration
+└── utils/         # Helper functions and utilities
+```
 
 A React Native mobile application built with Expo and TypeScript. The easiest way to test this app is using the Expo Go app on your mobile device.
 
@@ -10,8 +63,8 @@ A React Native mobile application built with Expo and TypeScript. The easiest wa
 
 2. Clone the repository:
 ```bash
-git clone [your-repository-url]
-cd bank-test
+git clone [https://github.com/faieqidlan/nova-bank]
+cd nova-app
 ```
 
 3. Install dependencies:
@@ -46,6 +99,14 @@ That's it! The app will load on your device and automatically update as you make
 cp .env.example .env
 ```
 Then fill in the required environment variables in the `.env` file.
+```
+   FIREBASE_API_KEY=your_api_key
+   FIREBASE_AUTH_DOMAIN=your_project_id.firebaseapp.com
+   FIREBASE_PROJECT_ID=your_project_id
+   FIREBASE_STORAGE_BUCKET=your_project_id.appspot.com
+   FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+   FIREBASE_APP_ID=your_app_id
+```
 
 ## Running the App
 
@@ -127,40 +188,3 @@ When testing biometric authentication in Expo Go:
 ## Support
 
 For additional support or to report issues, please create an issue in the repository.
-
-## License
-
-[Your License Information]
-
-## Building APK for Internal Testing
-
-To build an APK for internal testing and distribution:
-
-1. Install EAS CLI if you haven't already:
-```bash
-npm install -g eas-cli
-```
-
-2. Log in to your Expo account:
-```bash
-npx expo login
-```
-
-3. Build the APK:
-```bash
-npx expo prebuild
-eas build --platform android --profile preview
-```
-
-4. After the build completes:
-   - You'll receive a URL to download the APK
-   - Share this URL with your testers
-   - Testers will need to enable "Install from Unknown Sources" in their Android settings
-
-5. To install the APK:
-   - Download the APK from the provided URL
-   - Open the downloaded file
-   - Follow the installation prompts
-   - If prompted, allow installation from unknown sources
-
-Note: The preview build is configured for internal testing. For production releases, you'll need to configure signing keys and use the production profile. 

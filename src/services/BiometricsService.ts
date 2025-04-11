@@ -61,61 +61,45 @@ export class BiometricsService {
       
       let biometryType;
       
-      // For iOS, handle FaceID and TouchID specially
+      // Platform-specific handling
       if (Platform.OS === 'ios') {
         if (types.includes(LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION)) {
           biometryType = 'FaceID';
         } else if (types.includes(LocalAuthentication.AuthenticationType.FINGERPRINT)) {
           biometryType = 'TouchID';
-        } else if (hasBiometrics) {
-          // If we can't determine the specific type but biometrics are available
-          // Try to determine which one by device capabilities - newer iPhones likely have FaceID
+        } else {
+          // For iOS devices that don't report their type clearly
           try {
-            // Attempt a low-impact authentication to see if we get more details
             const authResult = await LocalAuthentication.authenticateAsync({
               disableDeviceFallback: true,
               cancelLabel: 'Cancel',
               promptMessage: 'Identifying biometric type',
             });
             
-            // Check if the error gives us any clues about the biometry type
             if (!authResult.success && (authResult as any).error) {
               const errorMsg = (authResult as any).error.toLowerCase();
               if (errorMsg.includes('face') || errorMsg.includes('faceid')) {
                 biometryType = 'FaceID';
               } else if (errorMsg.includes('touch') || errorMsg.includes('fingerprint')) {
                 biometryType = 'TouchID';
-              } else {
-                // Default to FaceID for newer devices
-                biometryType = 'FaceID';
               }
-            } else {
-              // Default to FaceID for newer devices
-              biometryType = 'FaceID';
             }
           } catch (error) {
             console.log('Error determining biometric type:', error);
-            // Default to FaceID for newer devices
-            biometryType = 'FaceID';
           }
         }
       } else {
-        // For Android and other platforms
-        if (types.includes(LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION)) {
-          biometryType = 'FaceID';
-        } else if (types.includes(LocalAuthentication.AuthenticationType.FINGERPRINT)) {
+        // Android and other platforms
+        if (types.includes(LocalAuthentication.AuthenticationType.FINGERPRINT)) {
           biometryType = 'Fingerprint';
         } else if (types.includes(LocalAuthentication.AuthenticationType.IRIS)) {
           biometryType = 'Iris';
-        } else if (hasBiometrics) {
-          // If we detect biometrics but can't determine the type, use a generic name
-          biometryType = 'Biometrics';
         }
       }
       
       // If we still don't have a biometryType but have biometrics, use a generic name
       if (!biometryType && hasBiometrics) {
-        biometryType = 'Biometrics';
+        biometryType = Platform.OS === 'ios' ? 'TouchID' : 'Fingerprint';
       }
       
       console.log('Biometric sensor available:', biometryType);
@@ -128,16 +112,6 @@ export class BiometricsService {
       };
     } catch (error) {
       console.error('Error checking biometric sensor availability:', error);
-      // For iOS, still return FaceID as available if we suspect it might be available
-      // This helps with devices where the detection might not be perfect
-      if (Platform.OS === 'ios') {
-        console.log('Error occurred on iOS, defaulting to potential FaceID availability');
-        return { 
-          available: true, 
-          biometryType: 'FaceID',
-          error: String(error)
-        };
-      }
       return { 
         available: false, 
         biometryType: undefined,
@@ -421,14 +395,14 @@ export class BiometricsService {
         return 'Face ID';
       case 'TouchID':
         return 'Touch ID';
+      case 'Face Recognition':
+        return 'Face Recognition';
       case 'Fingerprint':
         return 'Fingerprint';
       case 'Iris':
         return 'Iris Scan';
-      case 'Biometrics':
-        return 'Biometrics';
       default:
-        return 'Biometric Authentication';
+        return Platform.OS === 'ios' ? 'Touch ID' : 'Fingerprint';
     }
   }
 

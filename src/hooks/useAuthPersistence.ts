@@ -17,6 +17,11 @@ export const useAuthPersistence = () => {
     const checkFirstLaunch = async () => {
       try {
         const hasLaunchedBefore = await AsyncStorage.getItem('hasLaunchedBefore');
+        console.log('Initial storage check:', {
+          hasLaunchedBefore,
+          onboardingCompleted: await AsyncStorage.getItem('onboardingCompleted'),
+          wasLoggedIn: await AsyncStorage.getItem('wasLoggedIn')
+        });
         
         if (hasLaunchedBefore === null) {
           // This is the first launch
@@ -51,8 +56,10 @@ export const useAuthPersistence = () => {
    */
   const completeOnboarding = async () => {
     try {
+      console.log('Setting onboarding completed flag');
       await AsyncStorage.setItem('onboardingCompleted', 'true');
       setHasCompletedOnboarding(true);
+      console.log('Onboarding completed flag set successfully');
     } catch (error) {
       console.error('Error setting onboarding completed:', error);
     }
@@ -91,23 +98,30 @@ export const useAuthPersistence = () => {
     // Check if there's a current Firebase user
     const currentUser = FirebaseService.getCurrentUser();
     
+    console.log('Navigation Debug:', {
+      currentUser: !!currentUser,
+      previouslyLoggedIn,
+      hasCompletedOnboarding,
+      isFirstLaunch
+    });
+    
     if (currentUser) {
-      // User is currently authenticated with Firebase, go to main app
+      console.log('Navigating to Main - User is authenticated');
       return 'Main';
     }
     
-    if (!hasCompletedOnboarding) {
-      // User hasn't completed onboarding, show onboarding flow
-      return 'Onboarding';
-    }
-    
     if (previouslyLoggedIn) {
-      // User was previously logged in but needs to authenticate with biometrics
+      console.log('Navigating to Auth - User was previously logged in');
       return 'Auth';
     }
     
-    // Default to onboarding for new users
-    return 'Onboarding';
+    if (!hasCompletedOnboarding) {
+      console.log('Navigating to Onboarding - User has not completed onboarding');
+      return 'Onboarding';
+    }
+    
+    console.log('Navigating to Auth - Default route for returning users');
+    return 'Auth';
   };
 
   return {

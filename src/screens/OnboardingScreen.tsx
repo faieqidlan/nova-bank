@@ -165,20 +165,9 @@ const OnboardingScreen: React.FC = () => {
   
   const handleBiometricSetup = async () => {
     try {
-      // First try to set up biometric authentication
-      const success = await authenticateWithCredentials(email, password);
-      
-      if (success) {
-        // If biometric setup successful, go to passcode setup
-        animateToNextStep(OnboardingStep.PASSCODE_SETUP);
-      } else {
-        // If biometric setup fails, still allow passcode setup
-        Alert.alert(
-          'Biometric Setup Failed',
-          'You can still set up a passcode for secure access.',
-          [{ text: 'Continue', onPress: () => animateToNextStep(OnboardingStep.PASSCODE_SETUP) }]
-        );
-      }
+      // Skip authentication since user is already in onboarding flow
+      // Proceed directly to passcode setup
+      animateToNextStep(OnboardingStep.PASSCODE_SETUP);
     } catch (error) {
       console.error('Biometric setup error:', error);
       Alert.alert(

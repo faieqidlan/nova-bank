@@ -57,19 +57,28 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     
     // Set up Firebase auth state listener
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      console.log('Firebase auth state changed:', {
+        hasUser: !!firebaseUser,
+        currentAuthStatus: authStatus,
+        previouslyLoggedIn: !!user
+      });
+      
       if (firebaseUser) {
         // User is signed in, get their profile from Firestore
         const userProfile = await FirebaseService.getUserProfile(firebaseUser.uid);
         
         if (userProfile) {
+          console.log('Setting authenticated state with user profile');
           setUser(userProfile);
           setAuthStatus('authenticated');
         } else {
           // User is authenticated but no profile exists
+          console.log('User authenticated but no profile exists');
           setAuthStatus('unauthenticated');
         }
       } else {
         // User is signed out
+        console.log('User signed out, setting unauthenticated state');
         setUser(null);
         setAuthStatus('unauthenticated');
       }
@@ -168,16 +177,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       console.log('Attempting biometric authentication...');
       
-      // Check if we're in Expo Go (where FaceID might not work)
-      let isExpoGo = false;
-      try {
-        const constants = require('expo-constants');
-        isExpoGo = constants.default.executionEnvironment === 'storeClient';
-        console.log('Running in Expo Go:', isExpoGo);
-      } catch (err) {
-        console.log('Error checking Expo Go:', err);
-      }
-      
       // First try a direct authentication approach with passcode fallback
       const authResult = await LocalAuthentication.authenticateAsync({
         promptMessage: "Sign in to your account",
@@ -201,6 +200,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           console.log('Persisting login state after biometric auth');
           await AsyncStorage.setItem('wasLoggedIn', 'true');
           await setUserLoggedIn();
+          
+          // Verify the flag was set correctly
+          const wasLoggedIn = await AsyncStorage.getItem('wasLoggedIn');
+          console.log('Verification - wasLoggedIn flag value:', wasLoggedIn);
           
           return true;
         } else {
@@ -297,10 +300,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         
         // Persist login state - this must be set for biometric auth to work later
         console.log('User authenticated, persisting login state');
-        
-        // Set in both AsyncStorage directly and via the hook for redundancy
+        console.log('Setting wasLoggedIn flag in AsyncStorage');
         await AsyncStorage.setItem('wasLoggedIn', 'true');
+        console.log('Calling setUserLoggedIn hook');
         await setUserLoggedIn();
+        
+        // Verify the flag was set correctly
+        const wasLoggedIn = await AsyncStorage.getItem('wasLoggedIn');
+        console.log('Verification - wasLoggedIn flag value:', wasLoggedIn);
         
         setIsLoading(false);
         

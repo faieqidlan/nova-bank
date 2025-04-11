@@ -30,12 +30,14 @@ const SplashScreen: React.FC = () => {
   } = useAuthPersistence();
   const navigation = useNavigation();
   const [isVisible, setIsVisible] = useState(true);
+  const [hasNavigated, setHasNavigated] = useState(false);
 
   // Animation values
   const opacity = useState(new Animated.Value(0))[0];
   const scale = useState(new Animated.Value(0.9))[0];
 
   useEffect(() => {
+    console.log('SplashScreen useEffect triggered');
     // Start animation immediately
     Animated.parallel([
       Animated.timing(opacity, {
@@ -90,8 +92,8 @@ const SplashScreen: React.FC = () => {
     
     const initializeApp = async () => {
       try {
-        // Only navigate after we've checked AsyncStorage
-        if (hasCheckedStorage) {
+        // Only navigate after we've checked AsyncStorage and haven't navigated yet
+        if (hasCheckedStorage && !hasNavigated) {
           // Determine initialRoute based on authentication status
           const initialRoute = determineInitialRoute();
           console.log('Initial route determined:', initialRoute);
@@ -130,8 +132,9 @@ const SplashScreen: React.FC = () => {
             }),
           ]).start(() => {
             setIsVisible(false);
+            setHasNavigated(true);
             // Navigate to the initialRoute using reset instead of navigate
-            console.log(`Navigating to ${initialRoute} from splash screen`);
+            console.log(`Navigating to ${initialRoute} from splash screen at timestamp: ${Date.now()}`);
             
             // Reset the navigation stack instead of navigate to avoid the error
             navigation.reset({
@@ -146,7 +149,7 @@ const SplashScreen: React.FC = () => {
             });
           });
         } else {
-          console.log('Auth storage not checked yet, remaining on splash screen');
+          console.log('Auth storage not checked yet or already navigated, remaining on splash screen');
         }
       } catch (error) {
         console.error('Error initializing app from splash screen:', error);
@@ -154,7 +157,7 @@ const SplashScreen: React.FC = () => {
     };
 
     initializeApp();
-  }, [navigation, hasCheckedStorage, determineInitialRoute]);
+  }, [hasCheckedStorage, hasNavigated]); // Only depend on these two values
 
   if (!isVisible) return null;
 

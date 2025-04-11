@@ -25,7 +25,7 @@ import FaceIDTestScreen from '../screens/FaceIDTestScreen';
 const Stack = createStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
-const MainTabs = () => {
+const MainTabNavigator = () => {
   const insets = useSafeAreaInsets();
   
   const tabBarStyle = useMemo(() => ({
@@ -82,7 +82,16 @@ const LoadingScreen = () => (
 
 const AppNavigator = () => {
   const { authStatus } = useAuth();
-  const { hasCheckedStorage, previouslyLoggedIn } = useAuthPersistence();
+  const { hasCheckedStorage, previouslyLoggedIn, hasCompletedOnboarding } = useAuthPersistence();
+
+  console.log('AppNavigator state:', {
+    authStatus,
+    hasCheckedStorage,
+    previouslyLoggedIn,
+    hasCompletedOnboarding,
+    shouldShowSplash: authStatus === 'idle' && !previouslyLoggedIn,
+    shouldShowAuth: authStatus !== 'authenticated' && authStatus !== 'idle'
+  });
 
   // Show a loading indicator while checking storage, but inside NavigationContainer
   if (!hasCheckedStorage && authStatus === 'idle') {
@@ -96,8 +105,8 @@ const AppNavigator = () => {
   return (
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
-        {/* Initial loading and splash screen */}
-        {authStatus === 'idle' && (
+        {/* Initial loading and splash screen - only show for new users */}
+        {authStatus === 'idle' && !previouslyLoggedIn && (
           <Stack.Screen 
             name="Splash" 
             component={SplashScreen} 
@@ -105,10 +114,9 @@ const AppNavigator = () => {
           />
         )}
         
-        {/* Authentication flow */}
+        {/* Authentication flow - show if not authenticated and not idle */}
         {authStatus !== 'authenticated' && authStatus !== 'idle' && (
           <>
-            <Stack.Screen name="Splash" component={SplashScreen} />
             <Stack.Screen name="Onboarding" component={OnboardingScreen} />
             <Stack.Screen 
               name="Auth" 
@@ -122,29 +130,9 @@ const AppNavigator = () => {
         {/* Main app screens */}
         {authStatus === 'authenticated' && (
           <>
-            <Stack.Screen name="Main" component={MainTabs} />
-            <Stack.Screen 
-              name="TransactionDetail" 
-              component={TransactionDetailScreen} 
-              options={{ 
-                headerShown: false,
-                title: 'Transaction Details',
-                headerStyle: styles.header,
-                headerTintColor: COLORS.text,
-                headerTitleStyle: styles.headerTitle,
-              }}
-            />
-            <Stack.Screen 
-              name="FaceIDTest" 
-              component={FaceIDTestScreen} 
-              options={{ 
-                headerShown: false,
-                title: 'Face ID Test',
-                headerStyle: styles.header,
-                headerTintColor: COLORS.text,
-                headerTitleStyle: styles.headerTitle,
-              }}
-            />
+            <Stack.Screen name="Main" component={MainTabNavigator} />
+            <Stack.Screen name="TransactionDetail" component={TransactionDetailScreen} />
+            <Stack.Screen name="FaceIDTest" component={FaceIDTestScreen} />
           </>
         )}
       </Stack.Navigator>
