@@ -65,21 +65,27 @@ const ProfileScreen: React.FC = () => {
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
-        <View style={styles.profileHeader}>
-          <View style={styles.avatarContainer}>
-            <Text style={styles.avatarText}>
-              {user?.name.charAt(0) || 'U'}
-            </Text>
+        <Card style={styles.profileCard}>
+          <View style={styles.profileHeader}>
+            <View style={styles.avatarContainer}>
+              <Text style={styles.avatarText}>
+                {user?.name?.charAt(0)?.toUpperCase() || 'U'}
+              </Text>
+            </View>
+            <View style={styles.profileInfo}>
+              <Text style={styles.profileName}>
+                {user?.name ? user.name.charAt(0).toUpperCase() + user.name.slice(1) : 'User'}
+              </Text>
+              <Text style={styles.profileEmail}>{user?.email || 'user@example.com'}</Text>
+              {user?.phoneNumber && (
+                <View style={styles.phoneContainer}>
+                  <Ionicons name="call-outline" size={14} color={COLORS.textSecondary} />
+                  <Text style={styles.profileDetail}>{user.phoneNumber}</Text>
+                </View>
+              )}
+            </View>
           </View>
-          <Text style={styles.profileName}>{user?.name || 'User'}</Text>
-          <Text style={styles.profileEmail}>{user?.email || 'user@example.com'}</Text>
-          
-          {user?.phoneNumber && (
-            <Text style={styles.profileDetail}>
-              <Ionicons name="call-outline" size={14} color={COLORS.textSecondary} /> {user.phoneNumber}
-            </Text>
-          )}
-        </View>
+        </Card>
 
         {settings.map((section, index) => (
           <Card key={index} style={styles.settingsCard}>
@@ -157,23 +163,31 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 40,
   },
-  profileHeader: {
-    alignItems: 'center',
+  profileCard: {
     marginBottom: 24,
+    borderRadius: 24,
+    padding: 20,
+  },
+  profileHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   avatarContainer: {
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.primary + '15',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 16,
+    marginRight: 16,
   },
   avatarText: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: COLORS.card,
+    color: COLORS.primary,
+  },
+  profileInfo: {
+    flex: 1,
   },
   profileName: {
     fontSize: 24,
@@ -186,10 +200,15 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     marginBottom: 4,
   },
+  phoneContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
+  },
   profileDetail: {
     fontSize: 14,
     color: COLORS.textSecondary,
-    marginTop: 2,
+    marginLeft: 4,
   },
   settingsCard: {
     marginBottom: 16,

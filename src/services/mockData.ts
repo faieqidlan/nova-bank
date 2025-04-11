@@ -170,12 +170,12 @@ export const mockTransactions: Transaction[] = [
     id: '16',
     amount: 18.50,
     description: 'Coffee Shop',
-    date: new Date(2024, 10, 17),
+    date: new Date(2024, 10, 16),
     type: 'debit',
     category: 'Dining',
     merchant: 'Brew Haven',
     status: 'completed',
-    reference: 'POS-17112024'
+    reference: 'POS-16112024'
   },
   {
     id: '17',
@@ -203,7 +203,7 @@ export const mockTransactions: Transaction[] = [
     id: '19',
     amount: 1250.00,
     description: 'Bonus Payment',
-    date: new Date(2024, 10, 22),
+    date: new Date(2024, 10, 25),
     type: 'credit',
     category: 'Income',
     merchant: 'Nova Bank Inc.',
