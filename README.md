@@ -17,7 +17,7 @@ This is a React Native mobile application built with Expo and TypeScript, implem
 
 2. Clone and set up the project:
 ```bash
-git clone [https://github.com/faieqidlan/nova-bank]
+git clone https://github.com/faieqidlan/nova-bank
 cd nova-app
 yarn install  # or npm install
 cp .env.example .env
@@ -63,7 +63,7 @@ A React Native mobile application built with Expo and TypeScript. The easiest wa
 
 2. Clone the repository:
 ```bash
-git clone [https://github.com/faieqidlan/nova-bank]
+git clone https://github.com/faieqidlan/nova-bank
 cd nova-app
 ```
 
